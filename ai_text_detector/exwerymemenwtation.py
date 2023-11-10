@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Counter
 import spacy
@@ -8,6 +9,9 @@ from pelutils import Table
 def get_daaaata():
     return pd.read_csv(Path("data") / "data.csv")
 
+def get_val_dataaa():
+    with open("examples.json", "r", encoding="utf-8") as file:
+        return pd.DataFrame({"text": json.load(file)})
 
 def mean_sentence_length(nlp, text: str) -> float:
     doc = nlp(text)
@@ -85,7 +89,8 @@ def lemma_counts(nlp, text):
 
 
 def run_funnystuff():
-    df = get_daaaata()
+    # df = get_daaaata()
+    df = get_val_dataaa()
     # python -m spacy download da_core_news_sm
     nlp = spacy.load("da_core_news_sm")
     for thingymadingy in (
@@ -111,16 +116,17 @@ def run_funnystuff():
             df = pd.concat([df, expanded_col], axis=1).fillna(0)
             df.drop(column, axis=1, inplace=True)
     t = Table()
-    t.add_header(["Thingy", "🗿", "🤖"])
+    t.add_header(["Thingy", "?"])#"🗿", "🤖"])
     for col in df.select_dtypes(include=["number"]):
         if col == "is_generated":
             continue
         row = [col]
-        for is_generated in 0, 1:
-            subdf = df[df.is_generated == is_generated]
-            row.append("%.1f ± %.1f" % (subdf[col].mean(), 2*subdf[col].std()/len(df)**0.5))
+        # for is_generated in 0, 1:
+            # subdf = df[df.is_generated == is_generated]
+        row.append("%.1f ± %.1f" % (df[col].mean(), 2*df[col].std()/len(df)**0.5))
         t.add_row(row)
     print(t)
+    df.to_csv("val_with_metrics.csv")
 
 
 run_funnystuff() if __name__ == "__main__" else print("dingaling")
