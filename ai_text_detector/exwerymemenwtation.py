@@ -55,13 +55,13 @@ def special_char_count(_, text: str) -> int:
 def pos_counts(nlp, text):
     doc = nlp(text)
     pos_counts = Counter(token.pos_ for token in doc)
-    return pos_counts
+    return dict(pos_counts)
 
 
 def ner_counts(nlp, text):
     doc = nlp(text)
     ner_counts = Counter(ent.label_ for ent in doc.ents)
-    return ner_counts
+    return dict(ner_counts)
 
 
 def dependency_features(nlp, text):
@@ -105,7 +105,11 @@ def run_funnystuff():
         df[thingymadingy] = df["text"].apply(
             lambda s: globals().get(thingymadingy)(nlp, s)
         )
-
+    for column in df.columns:
+        if isinstance(df[column].iloc[0], dict):
+            expanded_col = pd.json_normalize(df[column])
+            df = pd.concat([df, expanded_col], axis=1).fillna(0)
+            df.drop(column, axis=1, inplace=True)
     t = Table()
     t.add_header(["Thingy", "🗿", "🤖"])
     for col in df.select_dtypes(include=["number"]):
