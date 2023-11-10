@@ -3,6 +3,7 @@ import json
 from functools import wraps
 from typing import Callable
 
+import cv2
 import numpy as np
 from flask import Flask, request, jsonify
 from flask_restful import Api
@@ -13,6 +14,20 @@ from pelutils import log
 app = Flask(__name__)
 Api(app)
 CORS(app)
+
+def validate_segmentation(pet_mip, seg_pred):
+    assert isinstance(seg_pred, np.ndarray), "Segmentation was not succesfully decoded as a numpy array"
+    assert pet_mip.shape == seg_pred.shape, f"Segmentation of shape {seg_pred.shape} is not identical to image shape {pet_mip.shape}"
+
+    unique_vals = list(np.unique(seg_pred))
+    allowed_vals = [0, 255]
+    unique_vals_str = ", ".join([str(x) for x in (unique_vals)])
+    all_values_are_allowed = all(
+        x in allowed_vals for x in unique_vals)
+    assert all_values_are_allowed,  f"The segmentation contains values {{{unique_vals_str}}} but only values {{0,255}} are allowed"
+
+    assert np.all(seg_pred[:, :, 0] == seg_pred[:, :, 1]) & np.all(
+        seg_pred[:, :, 1] == seg_pred[:, :, 2]), "The segmentation values should be identical along the 3 color channels."
 
 def encode_request(np_array: np.ndarray) -> str:
     # Encode the NumPy array as a png image
@@ -49,9 +64,10 @@ def api_fun(func) -> Callable:
 @app.route("/predict", methods=["POST"])
 @api_fun
 def predict():
-    data = _get_data()
-    print(data)
-    return { "img": [0] * len(data) }
+    img = _get_data()
+    seg = 255 * np.ones_like(img)
+    validate_segmentation(img, seg)
+    return { "img": encode_request(seg) }
 
 if __name__ == "__main__":
     log.configure(
