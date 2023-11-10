@@ -36,6 +36,9 @@ def api_fun(func) -> Callable:
 @api_fun
 def predict():
     data = _get_data()
+    with open("examples.json", "w", encoding="utf-8") as file:
+        json.dump(data, file)
+
     middle_boi = sorted(lens := [len(s.split()) for s in data])[len(data) // 2]
     return {"class_ids": [1 if abe > middle_boi else 0 for abe in lens]}
 
