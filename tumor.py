@@ -61,12 +61,23 @@ def api_fun(func) -> Callable:
 
     return wrapper
 
+def threshold_classifier(img: np.ndarray) -> np.ndarray:
+    return img < 50 / 255
+
+def seg_to_shitty_rgb(seg: np.ndarray) -> np.ndarray:
+    return np.stack((seg, seg, seg), axis=-1).astype(np.uint8) * 255
+
 @app.route("/predict", methods=["POST"])
 @api_fun
 def predict():
-    img = _get_data()
-    seg = 255 * np.ones_like(img)
-    validate_segmentation(img, seg)
+    img_orig = _get_data()
+    assert (img_orig[..., 0] == img_orig[..., 1]).all()
+    assert (img_orig[..., 0] == img_orig[..., 2]).all()
+    img = img_orig[..., 0] / 255
+    # Replace this call
+    seg = threshold_classifier(img)
+    seg = seg_to_shitty_rgb(seg)
+    validate_segmentation(img_orig, seg)
     return { "img": encode_request(seg) }
 
 if __name__ == "__main__":
