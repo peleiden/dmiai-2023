@@ -1,0 +1,6 @@
+flask
+flask_cors
+flask_restful
+pelutils==3.0.0a2
+numpy
+opencv-python
