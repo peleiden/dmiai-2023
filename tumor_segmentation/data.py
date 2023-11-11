@@ -8,11 +8,11 @@ import torch
 from tumor_segmentation import TrainConfig
 
 
-TRAIN_TEST_SPLIT = 0.5
+TRAIN_TEST_SPLIT = 0.75
 
 def get_data_files() -> tuple[list[str], list[str]]:
-    control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)[:20]
-    patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)[:20]
+    control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)
+    patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)
     return control_files, patient_files
 
 def load_data(control_files: list[str], patient_files: list[str]) -> tuple[np.ndarray, np.ndarray]:

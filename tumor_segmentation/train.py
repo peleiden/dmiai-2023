@@ -1,12 +1,16 @@
 import torch
+from pelutils import log
 from tqdm import tqdm
 
-from tumor_segmentation import TrainConfig
+from tumor_segmentation import device, TrainConfig
 from tumor_segmentation.data import get_data_files, load_data, split_train_test, dataloader as dataloader_
 from tumor_segmentation.model import TumorBoi
 
+
+log.configure("train-tumor.log")
+
 config = TrainConfig()
-model = TumorBoi(config)
+model = TumorBoi(config).to(device)
 
 control_files, patient_files = get_data_files()
 images, segmentations = load_data(control_files, patient_files)
@@ -20,12 +24,14 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
 for i in range(config.batches):
     if i % 10 == 0:
         ims, segs = next(test_dataloader)
+        model.eval()
         with torch.inference_mode():
             out = model(ims, segs)
-        print("Test %i: %.2f" % (i, out.loss))
+        model.train()
+        log("Test %i: %.2f" % (i, out.loss))
     ims, segs = next(train_dataloader)
     out = model(ims, segs)
-    print("Train %i: %.2f" % (i, out.loss))
+    log("Train %i: %.2f" % (i, out.loss))
     out.loss.backward()
     optimizer.step()
     optimizer.zero_grad()
