@@ -20,14 +20,14 @@ def post_attempt():
 
 def check_improved(uuid: str):
     while True:
-        get_url = f"https://cases.dmiai.dk/api/v1/usecases/ai-text-detector/validate/queue/{uuid}"
+        time.sleep(np.random.exponential(0.5))
+        get_url = f"https://cases.dmiai.dk/api/v1/usecases/ai-text-detector/validate/queue/{uuid}/attempt"
         get_headers = {"x-token": "aba10b0bc50e4ce6bdc180b2e05df4cc"}
 
         get_response = requests.get(get_url, headers=get_headers)
         get_response_json = get_response.json()
-        if get_response_json.get("status") == "done":
-            return int(get_response_json["attempt"]["score"] > ALL_ZEROS_SCORE)
-        time.sleep(np.random.exponential(0.5))
+        if get_response_json.get("finished_at"):
+            return int(get_response_json["score"] > ALL_ZEROS_SCORE)
 
 
 def main():
