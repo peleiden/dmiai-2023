@@ -5,12 +5,14 @@ import cv2
 import numpy as np
 import torch
 
+from tumor_segmentation import TrainConfig
+
 
 TRAIN_TEST_SPLIT = 0.5
 
 def get_data_files() -> tuple[list[str], list[str]]:
-    control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)[:50]
-    patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)[:50]
+    control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)[:20]
+    patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)[:20]
     return control_files, patient_files
 
 def load_data(control_files: list[str], patient_files: list[str]) -> tuple[np.ndarray, np.ndarray]:
@@ -50,7 +52,7 @@ def load_data(control_files: list[str], patient_files: list[str]) -> tuple[np.nd
         segarr[i] = full_seg
 
     assert ((segarr == 0) | (segarr == 255)).all()
-    segarr = np.round(segarr / 255).astype(int)
+    segarr = np.round(segarr / 255).astype(bool)
 
     return imarr, segarr
 
@@ -66,7 +68,12 @@ def split_train_test(images: np.ndarray, segmentations: np.ndarray) -> tuple[np.
 
     return train_images, train_segmentations, test_images, test_segmentations
 
-# def dataloader(images: np.ndarray, segmentations: np.ndarray)
+def dataloader(train_cfg: TrainConfig, images: np.ndarray, segmentations: np.ndarray):
+    assert len(images) == len(segmentations)
+    n = len(images)
+    while True:
+        index = np.random.randint(0, n, train_cfg.batch_size)
+        yield images[index], segmentations[index]
 
 if __name__ == "__main__":
     control_files, patient_files = get_data_files()
