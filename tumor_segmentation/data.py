@@ -8,8 +8,6 @@ import torch
 from tumor_segmentation import TrainConfig
 
 
-TRAIN_TEST_SPLIT = 0.75
-
 def get_data_files() -> tuple[list[str], list[str]]:
     control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)
     patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)
@@ -56,11 +54,11 @@ def load_data(control_files: list[str], patient_files: list[str]) -> tuple[np.nd
 
     return imarr, segarr
 
-def split_train_test(images: np.ndarray, segmentations: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def split_train_test(images: np.ndarray, segmentations: np.ndarray, train_cfg: TrainConfig) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     n = len(images)
     index = np.arange(n)
     np.random.shuffle(index)  # inplace >:(
-    n_train = int(TRAIN_TEST_SPLIT * n)
+    n_train = int(train_cfg.train_test_split * n)
     train_images = images[index[:n_train]]
     train_segmentations = segmentations[index[:n_train]]
     test_images = images[index[n_train:]]
@@ -74,6 +72,19 @@ def dataloader(train_cfg: TrainConfig, images: np.ndarray, segmentations: np.nda
     while True:
         index = np.random.randint(0, n, train_cfg.batch_size)
         yield images[index], segmentations[index]
+
+def dice(target: np.ndarray, pred: np.ndarray) -> float:
+    if target.sum() == 0 and pred.sum() == 0:
+        return 1
+    tp = (target & pred).sum()
+    fp = (~target & pred).sum()
+    fn = (target & ~pred).sum()
+    d = 2 * tp / (2 * tp + fp + fn)
+    assert not np.isnan(d), breakpoint()
+    return d
+
+def vote(pred_segs: np.ndarray) -> np.ndarray:
+    return np.round(pred_segs.mean(axis=0)).astype(bool)
 
 if __name__ == "__main__":
     control_files, patient_files = get_data_files()
