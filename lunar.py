@@ -39,7 +39,10 @@ gameno = 0
 def predict():
     global gameno
     obs, reward, is_terminal, total_reward, game_ticks = _get_data()
-    action = agent.act(obs)
+    if obs[-2] and obs[-1]:
+        action = 0
+    else:
+        action = agent.act(obs)
     d[-1].append({
         "obs": obs,
         "reward": reward,
