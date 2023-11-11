@@ -11,6 +11,10 @@ from flask_restful import Api
 from flask_cors import CORS
 from pelutils import log
 
+from tumor_segmentation import device, TrainConfig
+from tumor_segmentation.data import vote
+from tumor_segmentation.model import TumorBoi
+
 
 app = Flask(__name__)
 Api(app)
@@ -71,10 +75,16 @@ def seg_to_shitty_rgb(seg: np.ndarray) -> np.ndarray:
 @torch.inference_mode()
 def mask2former_seg(img: np.ndarray) -> np.ndarray:
     seg_placeholder = np.zeros_like(img)[..., 0].astype(bool)
-    out = model([img], [seg_placeholder])
-    seg = model.processor.post_process_semantic_segmentation(out)[0]
-    seg = seg.cpu().numpy().astype(np.uint8)
-    seg = cv2.resize(seg, (img.shape[1], img.shape[0])).astype(bool)
+
+    all_pred_segs = list()
+    for i, model in enumerate(models):
+        out = model([img], [seg_placeholder])
+        seg = model.processor.post_process_semantic_segmentation(out)[0]
+        seg = seg.cpu().numpy().astype(np.uint8)
+        seg = cv2.resize(seg, (img.shape[1], img.shape[0])).astype(bool)
+        all_pred_segs.append(seg)
+    segs = np.array(all_pred_segs)
+    seg = vote(segs)
     return seg
 
 @app.route("/predict", methods=["POST"])
@@ -96,11 +106,12 @@ if __name__ == "__main__":
         "tumor.log",
         append=True,
     )
-    from tumor_segmentation import device, TrainConfig
-    from tumor_segmentation.model import TumorBoi
-    config = TrainConfig()
-    model = TumorBoi(config).eval().to(device)
-    model.load_state_dict(torch.load("tumor_segmentation/tumor_model.pt", map_location=device))
+    config = TrainConfig.load("tumor_segmentation")
+    models: list[TumorBoi] = list()
+    for i in range(config.num_models):
+        model = TumorBoi(config).eval().to(device)
+        model.load_state_dict(torch.load("tumor_segmentation/tumor_model_%i.pt" % i, map_location=device))
+        models.append(model)
 
     im = cv2.imread("tumor_segmentation/data/patients/imgs/patient_000.png")
     seg_true = cv2.imread("tumor_segmentation/data/patients/labels/segmentation_000.png")

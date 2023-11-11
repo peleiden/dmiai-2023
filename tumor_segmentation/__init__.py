@@ -10,16 +10,19 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 @dataclass
 class TrainConfig(DataStorage):
 
-    lr: float = 1e-4
-    batch_size: int = 16
-    batches: int = 300
+    lr: float = 1e-5
+    batch_size: int = 20
+    batches: int = 500
     num_models: int = 3
-    pretrain_path: str = "facebook/mask2former-swin-small-ade-semantic"
-    config: str = "tumor_segmentation/mask2former-swin-small-ade-semantic.json"
+    pretrain_path: str = "facebook/mask2former-swin-large-ade-semantic.json"
     train_test_split: float = 0.75
 
     def __post_init__(self):
         assert self.num_models % 2 == 1
+
+    @property
+    def config(self) -> str:
+        return self.pretrain_path.replace("facebook/", "tumor_segmentation/configs/") + ".json"
 
 @dataclass
 class TrainResults(DataStorage):
