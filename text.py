@@ -8,7 +8,7 @@ from flask_cors import CORS
 from pelutils import log
 import spacy
 
-from ai_text_detector.exwerymemenwtation import sentence_complexity
+# from ai_text_detector.exwerymemenwtation import sentence_complexity
 
 # python -m spacy download da_core_news_sm
 nlp = spacy.load("da_core_news_sm")
