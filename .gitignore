@@ -6,6 +6,7 @@ local_*
 *.DS_Store
 *.out
 .python-version
+*.png
 
 # Latex
 *.aux
