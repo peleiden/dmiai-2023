@@ -1,15 +1,7 @@
-import base64
-import json
-import random
-from functools import wraps
+""" Kør med python -m uvicorn lunar:router --host 0.0.0.0 --port 6971 """
 from typing import List
 
-import numpy as np
-from fastapi import FastAPI, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
-from flask import Flask, request, jsonify
-from flask_restful import Api
-from flask_cors import CORS
+from fastapi import APIRouter
 from pelutils import log, TT
 from pydantic import BaseModel
 
@@ -26,37 +18,7 @@ class LunarLanderPredictRequestDto(BaseModel):
 class LunarLanderPredictResponseDto(BaseModel):
     action: int
 
-# app = Flask(__name__)
-# Api(app)
-# CORS(app)
-
-# app = FastAPI()
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# def _get_data() -> tuple[list[float], float, bool, float, int]:
-#     """Returns data from a post request"""
-#     data = json.loads(request.data.decode("utf-8"))
-#     return data["observation"], data["reward"], data["is_terminal"], data["total_reward"], data["game_ticks"]
-
-# def api_fun(func) -> Callable:
-#     @wraps(func)
-#     def wrapper(*args, **kwargs):
-#         with log.log_errors:
-#             log("Received call to %s" % func.__name__)
-#             res = func(*args, **kwargs)
-#             return jsonify(res)
-
-#     return wrapper
-
 router = APIRouter()
-
 
 log.configure(
     "lunar.log",
