@@ -35,11 +35,11 @@ def api_fun(func) -> Callable:
 @app.route("/predict", methods=["POST"])
 @api_fun
 def predict():
-    # data = _get_data()
-    preds = [0]
-    # with open("idx_to_test.int", "r", encoding="utf-8") as file:
-    #     idx_to_test = int(file.read())
-    # preds[idx_to_test] = 1
+    data = _get_data()
+    preds = [0] * len(_get_data())
+    with open("idx_to_test.int", "r", encoding="utf-8") as file:
+        idx_to_test = int(file.read())
+    preds[idx_to_test] = 1
     #middle_boi = sorted(lens := [len(s.split()) for s in data])[len(data) // 2]
     #preds = [1 if abe > middle_boi else 0 for abe in lens]
     ##with open("cached_res.json", "r", encoding="utf-8") as file:

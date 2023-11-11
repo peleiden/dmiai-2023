@@ -4,7 +4,7 @@ from tqdm import tqdm
 import numpy as np
 import requests
 NUM_EXAMPLES = 1082
-# ALL_ZEROS_SCORE = ...
+ALL_ZEROS_SCORE = 0.5295748613678373
 
 
 
@@ -25,19 +25,12 @@ def check_improved(uuid: str):
 
         get_response = requests.get(get_url, headers=get_headers)
         get_response_json = get_response.json()
-        # FIXME: Check whether the response was succesful and
-        breakpoint()
+        if get_response_json.get("status") == "done":
+            return int(get_response_json["attempt"]["score"] > ALL_ZEROS_SCORE)
         time.sleep(np.random.exponential(0.5))
 
 
-
-
 def main():
-    response = post_attempt()
-    uuid = ""
-    breakpoint()
-    check_improved(uuid)
-
     already_checked = set()
     out = Path("true_labels.thingy")
     if out.exists():
@@ -52,9 +45,8 @@ def main():
         while True:
             time.sleep(np.random.exponential(1))
             response = post_attempt()
-            post_succesful = True # FIXME
-            if post_succesful:
-                uuid = "" # FIXME
+            if response.get("status") == "queued":
+                uuid = response["queued_attempt_uuid"]
                 break
             else:
                 print("Attempt POST unsuccesful, retrying ...")

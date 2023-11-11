@@ -1,3 +1,4 @@
+idx_to_test.int
 .python-version
 *.vscode
 **/local_*/
