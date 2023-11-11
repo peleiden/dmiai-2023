@@ -85,7 +85,7 @@ for i in range(config.batches):
 log.section("Saving")
 results.save("tumor_segmentation")
 for i, model in enumerate(models):
-    torch.save(model.state_dict(), "tumor_segmentation/tumor_model.pt")
+    torch.save(model.state_dict(), "tumor_segmentation/tumor_model_%i.pt" % i)
 
 log.section("Plotting")
 with plots.Figure("tumor_segmentation/train.png", figsize=(20, 10), fontsize=18):

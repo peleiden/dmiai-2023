@@ -11,7 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TrainConfig(DataStorage):
 
     lr: float = 1e-4
-    batch_size: int = 20
+    batch_size: int = 16
     batches: int = 300
     num_models: int = 3
     pretrain_path: str = "facebook/mask2former-swin-small-ade-semantic"
