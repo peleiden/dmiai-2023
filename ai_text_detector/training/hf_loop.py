@@ -1,7 +1,8 @@
 import os
 
-from datasets import DatasetDict, load_dataset
+from datasets import Dataset, DatasetDict, load_dataset
 from pelutils import JobDescription, Option, Parser, log
+import pandas as pd
 from transformers import (
     BertForSequenceClassification,
     BertTokenizer,
@@ -23,7 +24,13 @@ def preprocess_data(features: dict, tokenizer: BertTokenizer):
 
 def get_data(args: JobDescription) -> DatasetDict:
     tokenizer = BertTokenizer.from_pretrained(args.base_model)
-    dataset = load_dataset("json", data_files=os.path.join(args.location, "dataset.jsonl"))["train"]
+    df = pd.read_csv("val_with_metrics.csv", index_col=0)
+    df = df.drop(columns=[col for col in df.columns if col != "text"])
+    with open("true_labels.thingy", "r", encoding="utf-8") as file:
+        df["label"] = pd.Series([int(line.split()[-1]) for line in file.readlines() if line])
+    df = df.dropna()
+    df["label"] = df["label"].astype(int)
+    dataset = Dataset.from_pandas(df)
     dataset = dataset.train_test_split(test_size=args.val_split, seed=0)
     tokenized_dataset = dataset.map(
         lambda calls: preprocess_data(calls, tokenizer),
@@ -47,8 +54,8 @@ def get_training_args(args: JobDescription) -> TrainingArguments:
         per_device_eval_batch_size=args.eval_device_batch_size,
 
 
-        evaluation_strategy="epochs",
-        save_strategy="epochs",
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
         save_total_limit=2,
         logging_dir=os.path.join(out_dir, "logs"),
 
@@ -98,13 +105,12 @@ if __name__ == "__main__":
         Option("device-batch-size", type=int, default=16),
         Option("eval-device-batch-size", type=int, default=32),
         Option("val-split", type=float, default=0.5),
-        Option("lr", default=2e-5)
-        Option("weight-decay", default=0.01)
+        Option("lr", default=2e-5),
+        Option("weight-decay", default=0.01),
         multiple_jobs=True,
     )
 
     jobs = parser.parse_args()
-    parser.document()
     for job in jobs:
         log.configure(
             os.path.join(job.location, "ai-detector-train.log"),
