@@ -4,10 +4,12 @@ from typing import Counter
 import spacy
 import pandas as pd
 from pelutils import Table
+import hunspell
+import language_tool_python
 
 
 def get_daaaata():
-    return pd.read_csv(Path("data") / "data.csv")
+    return pd.read_csv(Path("ai_text_detector") / "data" / "data.csv")
 
 def get_val_dataaa():
     with open("examples.json", "r", encoding="utf-8") as file:
@@ -87,6 +89,19 @@ def lemma_counts(nlp, text):
     lemmas = Counter(token.lemma_ for token in doc)
     return len(lemmas)
 
+spello = hunspell.HunSpell("/home/sorenmulli/Nextcloud/Andet/Software/LaTeX/EndLosung/dict-da-2.4/da_DK.dic", "/home/sorenmulli/Nextcloud/Andet/Software/LaTeX/EndLosung/dict-da-2.4/da_DK.aff")
+tool = language_tool_python.LanguageToolPublicAPI('da-DK')
+def spello_mode(nlp, text):
+    return len(tool.check(text)) / len(text.split())
+    # doc = nlp(text)
+    # lemmas = [token.lemma_  for token in doc]
+    # lemmas = [lemma for lemma in lemmas if lemma.isalpha() and lemma.islower()]
+    # spelled = [spello.spell(lemma) for lemma in lemmas]
+    # return sum(spelled) / len(spelled)
+
+def contains_newlines(nlp, text):
+    return int("\n\n" in text)
+
 
 def run_funnystuff():
     # df = get_daaaata()
@@ -94,6 +109,8 @@ def run_funnystuff():
     # python -m spacy download da_core_news_sm
     nlp = spacy.load("da_core_news_sm")
     for thingymadingy in (
+        "contains_newlines",
+        "spello_mode",
         "mean_sentence_length",
         "sentence_length_variability",
         "word_count",
@@ -116,13 +133,13 @@ def run_funnystuff():
             df = pd.concat([df, expanded_col], axis=1).fillna(0)
             df.drop(column, axis=1, inplace=True)
     t = Table()
-    t.add_header(["Thingy", "?"])#"🗿", "🤖"])
     for col in df.select_dtypes(include=["number"]):
         if col == "is_generated":
             continue
         row = [col]
         # for is_generated in 0, 1:
-            # subdf = df[df.is_generated == is_generated]
+        #     subdf = df[df.is_generated == is_generated]
+        #     row.append("%.2f ± %.1f" % (subdf[col].mean(), 2*subdf[col].std()/len(subdf)**0.5))
         row.append("%.1f ± %.1f" % (df[col].mean(), 2*df[col].std()/len(df)**0.5))
         t.add_row(row)
     print(t)

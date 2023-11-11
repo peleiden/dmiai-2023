@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 # 1. Read the CSV
 df = pd.read_csv("val_with_metrics.csv")
 
+
 numeric_df = df.select_dtypes(include=['float64', 'int64']).drop(columns=["Unnamed: 0"])
 
 dim_reduc = TSNE(n_components=2)
@@ -20,9 +21,11 @@ with open("cached_res.json", "w", encoding="utf-8") as file:
     json.dump([int(x) for x in clustered_data], file)
 
 for i, text in enumerate(df.text):
-    if "vigtigt at huske" in text:
-        print(clustered_data[i])
+    if "..." in text:
         clustered_data[i] = 2
+    # if reduced_data[i, 1] > 15:
+    #     print(text)
+    #     print("----")
 
 
 
