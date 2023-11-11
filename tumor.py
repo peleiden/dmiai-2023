@@ -5,6 +5,7 @@ from typing import Callable
 
 import cv2
 import numpy as np
+import torch
 from flask import Flask, request, jsonify
 from flask_restful import Api
 from flask_cors import CORS
@@ -61,11 +62,20 @@ def api_fun(func) -> Callable:
 
     return wrapper
 
-def threshold_classifier(img: np.ndarray) -> np.ndarray:
+def threshold_seg(img: np.ndarray) -> np.ndarray:
     return img < 50 / 255
 
 def seg_to_shitty_rgb(seg: np.ndarray) -> np.ndarray:
     return np.stack((seg, seg, seg), axis=-1).astype(np.uint8) * 255
+
+@torch.inference_mode()
+def mask2former_seg(img: np.ndarray) -> np.ndarray:
+    seg_placeholder = np.zeros_like(img)[..., 0].astype(bool)
+    out = model([img], [seg_placeholder])
+    seg = model.processor.post_process_semantic_segmentation(out)[0]
+    seg = seg.cpu().numpy().astype(np.uint8)
+    seg = cv2.resize(seg, (img.shape[1], img.shape[0])).astype(bool)
+    return seg
 
 @app.route("/predict", methods=["POST"])
 @api_fun
@@ -73,9 +83,10 @@ def predict():
     img_orig = _get_data()
     assert (img_orig[..., 0] == img_orig[..., 1]).all()
     assert (img_orig[..., 0] == img_orig[..., 2]).all()
-    img = img_orig[..., 0] / 255
+    img = img_orig
     # Replace this call
-    seg = threshold_classifier(img)
+    # seg = threshold_seg(img)
+    seg = mask2former_seg(img)
     seg = seg_to_shitty_rgb(seg)
     validate_segmentation(img_orig, seg)
     return { "img": encode_request(seg) }
@@ -85,4 +96,14 @@ if __name__ == "__main__":
         "tumor.log",
         append=True,
     )
+    from tumor_segmentation import device, TrainConfig
+    from tumor_segmentation.model import TumorBoi
+    config = TrainConfig()
+    model = TumorBoi(config).eval().to(device)
+    model.load_state_dict(torch.load("tumor_segmentation/tumor_model.pt", map_location=device))
+
+    im = cv2.imread("tumor_segmentation/data/patients/imgs/patient_000.png")
+    seg_true = cv2.imread("tumor_segmentation/data/patients/labels/segmentation_000.png")
+    seg = mask2former_seg(im)
+
     app.run(host="0.0.0.0", port=6970, debug=False, processes=1, threaded=False)

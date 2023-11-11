@@ -10,6 +10,7 @@ from tumor_segmentation.model import TumorBoi
 log.configure("train-tumor.log")
 
 config = TrainConfig()
+config.save("tumor_segmentation")
 model = TumorBoi(config).to(device)
 
 control_files, patient_files = get_data_files()

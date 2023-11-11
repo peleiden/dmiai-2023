@@ -12,7 +12,7 @@ class TumorBoi(nn.Module):
         super().__init__()
         self.config = config
 
-        self.pre_processor = AutoImageProcessor.from_pretrained(self.config.pretrain_path)
+        self.processor = AutoImageProcessor.from_pretrained(self.config.pretrain_path)
         self.mask2former = Mask2FormerForUniversalSegmentation.from_pretrained(
             self.config.pretrain_path,
             config = self.config.config,
@@ -20,7 +20,7 @@ class TumorBoi(nn.Module):
         )
 
     def forward(self, images: np.ndarray, labels: np.ndarray) -> torch.Tensor:
-        inputs = self.pre_processor.preprocess(list(images), list(labels), return_tensors="pt")
+        inputs = self.processor.preprocess(list(images), list(labels), return_tensors="pt")
         images = inputs['pixel_values'].to(device)
         mask_labels = [x.to(device) for x in inputs['mask_labels']]
         class_labels = [x.to(device) for x in inputs['class_labels']]
