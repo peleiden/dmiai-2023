@@ -16,6 +16,7 @@ def make_parameter_sets() -> list[dict]:
 
     types = ["dqn", "ddqn", "ac"]
     layers = [[64], [128, 32], [128, 64, 32]]
+    dropouts = [0, 0.2, 0.5]
     memories = [5000, 20000, 50000]
     training_strides = [3, 5, 10]
     batch_sizes = [16, 32, 128]
@@ -23,18 +24,19 @@ def make_parameter_sets() -> list[dict]:
 
     parameter_sets = list()
 
-    for type, layer, memory, training_stride, batch_size, discount_factor in itertools.product(types, layers, memories, training_strides, batch_sizes, discount_factors):
+    for type, layer, dropout, memory, training_stride, batch_size, discount_factor in itertools.product(types, layers, dropouts, memories, training_strides, batch_sizes, discount_factors):
 
         parameters = {
             'type': type,
             'N_state': 8,
             'N_actions': 4,
             'layers': [8, *layer, 4],
+            'dropout': dropout,
             #
             'n_memory': memory,
             'training_stride': training_stride,
             'batch_size': batch_size,
-            'saving_stride': 100,
+            'saving_stride': 500,
             #
             'n_episodes_max': 20000,
             'n_solving_episodes': 100,
@@ -71,5 +73,5 @@ if __name__ == "__main__":
             f"Training {agents_per_parameter * len(parameter_sets):,} agents",
         )
         args = list(enumerate(parameter_sets * agents_per_parameter))
-        with mp.Pool(mp.cpu_count()) as pool:
+        with mp.Pool(2 * 63) as pool:
             pool.map(train_agent, args, chunksize=1)

@@ -55,7 +55,7 @@ class neural_network(nn.Module):
             self.network_layers.append(nn.Linear(neurons_in_current_layer, 
                                                 layers[i+1]) )
             #
-            if dropout:
+            if i < n_layers - 2 and dropout:
                 self.network_layers.append( nn.Dropout(p=p_dropout) )
             #
             if i < n_layers - 2:
@@ -283,7 +283,7 @@ class agent_base():
 
         self.neural_networks = {}
         for key, value in neural_networks.items():
-            self.neural_networks[key] = neural_network(value['layers']).to(device)
+            self.neural_networks[key] = neural_network(value['layers'], dropout=True, p_dropout=self.parameters['dropout']).to(device)
         
     def initialize_optimizers(self,optimizers):
         """Initialize optimizers"""
