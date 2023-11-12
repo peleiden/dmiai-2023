@@ -3,10 +3,19 @@ from glob import glob as glob  # glob
 
 import cv2
 import numpy as np
-import torch
+import albumentations as A
 
 from tumor_segmentation import TrainConfig
 
+def get_augmentation_pipeline():
+    return A.Compose([
+        A.HorizontalFlip(p=0.2),
+        A.Rotate(limit=5, p=0.2),
+        A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=0.2),
+        A.ElasticTransform(alpha=1, sigma=50, alpha_affine=50, p=0.2),
+        A.GaussNoise(var_limit=(10, 50), p=0.2),
+        # TODO: Add cropping which removes part of inputs but requires reconsideration of padding
+    ])
 
 def get_data_files() -> tuple[list[str], list[str]]:
     control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)
@@ -54,24 +63,36 @@ def load_data(control_files: list[str], patient_files: list[str]) -> tuple[np.nd
 
     return imarr, segarr
 
-def split_train_test(images: np.ndarray, segmentations: np.ndarray, train_cfg: TrainConfig) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def split_train_test(images: np.ndarray, segmentations: np.ndarray, train_cfg: TrainConfig, n_control: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    control_images, images = images[:n_control], images[n_control:]
+    control_segmentations, segmentations = segmentations[:n_control], segmentations[n_control:]
     n = len(images)
     index = np.arange(n)
     np.random.shuffle(index)  # inplace >:(
     n_train = int(train_cfg.train_test_split * n)
-    train_images = images[index[:n_train]]
-    train_segmentations = segmentations[index[:n_train]]
+
+    train_images = np.concatenate([control_images, images[index[:n_train]]])
+    train_segmentations = np.concatenate([control_segmentations, segmentations[index[:n_train]]])
+
     test_images = images[index[n_train:]]
     test_segmentations = segmentations[index[n_train:]]
 
     return train_images, train_segmentations, test_images, test_segmentations
 
-def dataloader(train_cfg: TrainConfig, images: np.ndarray, segmentations: np.ndarray):
+def dataloader(train_cfg: TrainConfig, images: np.ndarray, segmentations: np.ndarray, augmentations=None):
     assert len(images) == len(segmentations)
     n = len(images)
     while True:
         index = np.random.randint(0, n, train_cfg.batch_size)
-        yield images[index], segmentations[index]
+        index = np.random.randint(0, n, train_cfg.batch_size)
+        batch_images = images[index]
+        batch_segmentations = segmentations[index]
+        if augmentations is not None:
+            for i in range(train_cfg.batch_size):
+                augmented = augmentations(image=batch_images[i], mask=batch_segmentations[i])
+                batch_images[i] = augmented['image']
+                batch_segmentations[i] = augmented['mask']
+        yield batch_images, batch_segmentations
 
 def dice(target: np.ndarray, pred: np.ndarray) -> float:
     if target.sum() == 0 and pred.sum() == 0:

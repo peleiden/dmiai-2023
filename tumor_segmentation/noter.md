@@ -1,9 +1,7 @@
 - Padding og unpaddding i endpoint. Se load_data, hvordan det gøres
 - Dataaugmentering i data loader
-- Al kontrol til træning
 - Sample kontrolbilleder mindre?
 - Træn større modeller
-- Konfigurerbar træning
 - Batch size?
 - Mere overskuelige plots?
 - Gem model ved bedste checkpoint
