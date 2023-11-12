@@ -51,7 +51,7 @@ def train(args: JobDescription):
         batch_size=args.batch_size,
         train_control_prob=args.train_control_prob,
     )
-    config.save(os.path.join(args.location, "tumor_segmentation"))
+    config.save(os.path.join(args.location, "tumor-segmentation-config"))
 
     results = TrainResults.empty(config)
 
@@ -120,7 +120,7 @@ def train(args: JobDescription):
             results.test_batches.append(i)
 
     log.section("Saving")
-    results.save(os.path.join(os.path.join(args.location, "tumor_segmentation")))
+    results.save(os.path.join(os.path.join(args.location, "tumor-segmentation-results")))
     for i, model in enumerate(models):
         torch.save(model.state_dict(), os.path.join(args.location, "tumor_model_%i.pt" % i))
 
@@ -128,7 +128,7 @@ def train(args: JobDescription):
 
 if __name__ == "__main__":
     parser = Parser(
-        Option("base-model", default="facebook/mask2former-swin-large-ade-semantic"),
+        Option("base-model", default="facebook/mask2former-swin-small-ade-semantic"),
         Option("train-split", default=0.80), # prop of tumor images to train on
         Option("train-control-prob", default=0.5),
         Option("num-models", default=1),
