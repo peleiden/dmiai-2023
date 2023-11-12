@@ -117,7 +117,7 @@ def train(args: JobDescription):
             results.test_batches.append(i)
 
     log.section("Saving")
-    results.save("tumor_segmentation")
+    results.save(os.path.join(os.path.join(args.location, "tumor_segmentation")))
     for i, model in enumerate(models):
         torch.save(model.state_dict(), os.path.join(args.location, "tumor_model_%i.pt" % i))
 
