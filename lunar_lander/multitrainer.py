@@ -17,12 +17,12 @@ path = "/work3/s183912/trained-agents" if work3 else "trained-agents"
 
 def make_parameter_sets() -> list[dict]:
 
-    types = ["dqn"]
-    layers = [[128, 32]]
+    types = ["dqn", "ac"]
+    layers = [[128, 32], [32, 32], [256, 128, 32]]
     memories = [20000]
     training_strides = [3, 5, 10]
-    batch_sizes = [32]
-    discount_factors = [0.97, 0.99]
+    batch_sizes = [8, 32]
+    discount_factors = [0.97, 0.99, 0.995]
     epsilons = [0.1, 0.01]
 
     parameter_sets = list()
@@ -41,10 +41,10 @@ def make_parameter_sets() -> list[dict]:
             'batch_size': batch_size,
             'saving_stride': 500,
             #
-            'n_episodes_max': 3000,
+            'n_episodes_max': 5000,
             'n_solving_episodes': 50,
-            'solving_threshold_min': 220,
-            'solving_threshold_mean': 270,
+            'solving_threshold_min': 230,
+            'solving_threshold_mean': 280,
             #
             'discount_factor': discount_factor,
         }
@@ -60,7 +60,10 @@ def train_agent(args: tuple) -> dict:
     model_file = f"{path}/agent-{index}-{parameters['type']}"
     agent = make_agent(parameters)
     results = agent.train(env, verbose=not work3, model_filename=model_file, training_filename=model_file+".måskejson")
-    log("Agent %i mean return of last 100 episodes: %.2f" % (index, np.mean(results["epsiode_returns"][-100:])))
+    log(
+        "Agent %i mean return of last 100 episodes: %.2f" % (index, np.mean(results["epsiode_returns"][-100:])),
+        "Agent %i min. return of last 100 episodes: %.2f" % (index, np.min(results["epsiode_returns"][-100:])),
+    )
     return results
 
 if __name__ == "__main__":
@@ -72,7 +75,7 @@ if __name__ == "__main__":
         env = gym.make('LunarLander-v2')
         parameter_sets = make_parameter_sets()
         random.shuffle(parameter_sets)
-        agents_per_parameter = 5
+        agents_per_parameter = 10
         log(
             f"Got {len(parameter_sets):,} parameter sets",
             f"Training {agents_per_parameter * len(parameter_sets):,} agents",

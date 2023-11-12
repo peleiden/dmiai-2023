@@ -52,6 +52,7 @@ class neural_network(nn.Module):
         n_layers = len(layers)
         for i,neurons_in_current_layer in enumerate(layers[:-1]):
             #
+            # self.network_layers.append(nn.BatchNorm1d(neurons_in_current_layer))
             self.network_layers.append(nn.Linear(neurons_in_current_layer, 
                                                 layers[i+1]) )
             #
@@ -65,9 +66,7 @@ class neural_network(nn.Module):
         #
 
     def forward(self,x):
-        for layer in self.network_layers:
-            x = layer(x)
-        return x
+        return self.network_layers(x)
 
 
 
@@ -160,7 +159,7 @@ class agent_base():
                 {
                 'policy_net':{
                     'optimizer':'RMSprop',
-                     'optimizer_args':{'lr':1e-3}, # learning rate
+                     'optimizer_args':{'lr':2e-4}, # learning rate
                             }
                 },
             'losses':
@@ -288,12 +287,12 @@ class agent_base():
         """Initialize optimizers"""
 
         self.optimizers = {}
-        self.schedulers = {}
+        # self.schedulers = {}
         for key, value in optimizers.items():
             self.optimizers[key] = torch.optim.RMSprop(
                         self.neural_networks[key].parameters(),
                             **value['optimizer_args'])
-            self.optimizers[key] = torch.optim.lr_scheduler.ExponentialLR(self.optimizers[key], 0.99)
+            # self.schedulers[key] = torch.optim.lr_scheduler.ExponentialLR(self.optimizers[key], 0.99)
     
     def initialize_losses(self,losses):
         """Instantiate loss functions"""
@@ -544,13 +543,13 @@ class agent_base():
                         "| {0: 7d} |   {1: 10.3f}    |     "
                         "{2: 10.3f}      |    {3: 10.3f}      |")
         #
-        self.scheduler = torch.optim.lr_scheduler.ExponentialLR()
+
         for n_episode in range(self.n_episodes_max):
             #
             # reset environment and reward of current episode
             state, info = environment.reset()
             current_total_reward = 0.
-            best_score = -1000
+            best_score = 200
             #
             for i in itertools.count(): # timesteps of environment
                 #
@@ -600,9 +599,6 @@ class agent_base():
                         if model_filename != None:
                             output_state_dicts[n_episode] = self.get_state()
                             torch.save(output_state_dicts, model_filename + ".%i.pt" % i)
-                if training_filename != None:
-                    self.save_dictionary(dictionary=training_results,
-                                        filename=training_filename)
                     if verbose:
                             # print training stats
                             if n_episode % 100 == 0 and n_episode > 0:
@@ -858,7 +854,7 @@ class dqn(agent_base):
         target_net = self.neural_networks['target_net']
         #
         optimizer = self.optimizers['policy_net']
-        scheduler = self.schedulers['policy_net']
+        # scheduler = self.schedulers['policy_net']
         loss = self.losses['policy_net']
         #
         policy_net.train() # turn on training mode
@@ -903,7 +899,7 @@ class dqn(agent_base):
         optimizer.zero_grad()
         loss_.backward()
         optimizer.step()
-        scheduler.step()
+        # scheduler.step()
         #
         policy_net.eval() # turn off training mode
         #
@@ -917,20 +913,13 @@ class dqn(agent_base):
         """Soft update parameters of target net"""
         #
         # the following code is from https://stackoverflow.com/q/48560227
-        params1 = self.neural_networks['policy_net'].named_parameters()
-        params2 = self.neural_networks['target_net'].named_parameters()
+        sd_policy = self.neural_networks['policy_net'].state_dict()
+        sd_target = self.neural_networks['target_net'].state_dict()
 
-        dict_params2 = dict(params2)
-
-        for name1, param1 in params1:
-            if name1 in dict_params2:
-                dict_params2[name1].data.copy_(\
-                    self.target_net_update_tau*param1.data\
-                + (1-self.target_net_update_tau)*dict_params2[name1].data)
-        self.neural_networks['target_net'].load_state_dict(dict_params2)
-
-
-
+        for pname, param in sd_policy.items():
+            sd_target[pname].copy_(
+                self.target_net_update_tau * param.data + (1 - self.target_net_update_tau) * sd_target[pname].data,
+            )
 
 class actor_critic(agent_base):
     #
@@ -954,7 +943,7 @@ class actor_critic(agent_base):
         #
         default_parameters['optimizers']['critic_net'] = {
                     'optimizer':'RMSprop',
-                     'optimizer_args':{'lr':1e-3}, # learning rate
+                     'optimizer_args':{'lr':2e-4}, # learning rate
                             }
         #
         default_parameters['affinities_regularization'] = 0.01
@@ -1047,6 +1036,8 @@ class actor_critic(agent_base):
         #
         optimizer_actor = self.optimizers['policy_net']
         optimizer_critic = self.optimizers['critic_net']
+        # scheduler_actor = self.schedulers['policy_net']
+        # scheduler_critic = self.schedulers['critic_net']
         #
         loss_actor = self.losses['policy_net']
         loss_critic = self.losses['critic_net']
@@ -1086,6 +1077,8 @@ class actor_critic(agent_base):
         #
         actor_net.eval()
         #
+        # scheduler_actor.step()
+        # scheduler_critic.step()
 
 def make_agent(parameters: dict) -> agent_base:
     if parameters["type"] == "dqn":
