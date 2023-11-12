@@ -91,7 +91,8 @@ def dice(targets: list[np.ndarray], preds: list[np.ndarray]) -> float:
     dice_bois = []
     for target, pred in zip(targets, preds, strict=True):
         if target.sum() == 0 and pred.sum() == 0:
-            return 1
+            dice_bois.append(1.0)
+            continue
         tp = (target & pred).sum()
         fp = (~target & pred).sum()
         fn = (target & ~pred).sum()
