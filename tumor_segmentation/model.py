@@ -19,8 +19,8 @@ class TumorBoi(nn.Module):
             ignore_mismatched_sizes = True,
         )
 
-    def forward(self, images: np.ndarray, labels: np.ndarray) -> torch.Tensor:
-        inputs = self.processor.preprocess(list(images), list(labels), return_tensors="pt")
+    def forward(self, images: list[np.ndarray], labels: list[np.ndarray]) -> torch.Tensor:
+        inputs = self.processor.preprocess(images, labels, return_tensors="pt")
         images = inputs['pixel_values'].to(device)
         mask_labels = [x.to(device) for x in inputs['mask_labels']]
         class_labels = [x.to(device) for x in inputs['class_labels']]

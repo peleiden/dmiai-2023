@@ -35,11 +35,10 @@ def plot(location: str, results: TrainResults, config: TrainConfig):
         plt.ylabel("Dice")
         plt.legend()
 
-def out_to_seg(model, out) -> np.ndarray:
+def out_to_seg(model, out) -> list[np.ndarray]:
     segs = model.processor.post_process_semantic_segmentation(out)
     segs = [seg.cpu().numpy().astype(np.uint8) for seg in segs]
-    segs = np.array([cv2.resize(seg, (400, 991)).astype(bool) for seg in segs])
-    return segs
+    return [np.array(cv2.resize(seg, (400, 991)).astype(bool)) for seg in segs]
 
 def train(args: JobDescription):
     log("Training with", args)
@@ -93,13 +92,16 @@ def train(args: JobDescription):
             schedulers[j].step()
         if i % args.val_every == 0 or i == (config.batches - 1):
             ims, segs = next(test_dataloader)
-            all_pred_segs = list()
+            all_pred_segs = [[] for _ in range(len(test_images))]
             for j, model in enumerate(models):
+                img_idx = 0
                 model.eval()
                 with torch.inference_mode():
                     out = model(ims, segs)
                 pred_segs = out_to_seg(model, out)
-                all_pred_segs.append(pred_segs)
+                for seg in pred_segs:
+                    all_pred_segs[img_idx].append(seg)
+                    img_idx += 1
                 dice_score = dice(segs, pred_segs)
                 log(
                     "Test %i, %i: %.2f" % (i, j, out.loss.item()),
@@ -109,9 +111,8 @@ def train(args: JobDescription):
                 results.test_dice[j].append(dice_score)
                 model.train()
 
-            all_pred_segs = np.array(all_pred_segs)
             pred_segs = vote(all_pred_segs)
-            dice_score = dice(segs, all_pred_segs)
+            dice_score = dice(segs, pred_segs)
             results.ensemble_dice.append(dice_score)
             results.test_batches.append(i)
 
