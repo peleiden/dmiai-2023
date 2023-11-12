@@ -76,7 +76,22 @@ def train(args: JobDescription):
 
 
     for i in range(config.batches):
-        if i % args.val_every == 0:
+        for j, model in enumerate(models):
+            ims, segs = next(train_dataloader)
+            out = model(ims, segs)
+            log("Train %i, %i: %.2f" % (i, j, out.loss))
+
+            pred_segs = out_to_seg(model, out)
+            dice_score = dice(segs, pred_segs)
+
+            results.train_loss[j].append(out.loss.item())
+            results.train_dice[j].append(dice_score)
+
+            out.loss.backward()
+            optimizers[j].step()
+            optimizers[j].zero_grad()
+            schedulers[j].step()
+        if i % args.val_every == 0 or i == (config.batches - 1):
             ims, segs = next(test_dataloader)
             all_pred_segs = list()
             for j, model in enumerate(models):
@@ -99,22 +114,6 @@ def train(args: JobDescription):
             dice_score = dice(segs, all_pred_segs)
             results.ensemble_dice.append(dice_score)
             results.test_batches.append(i)
-
-        for j, model in enumerate(models):
-            ims, segs = next(train_dataloader)
-            out = model(ims, segs)
-            log("Train %i, %i: %.2f" % (i, j, out.loss))
-
-            pred_segs = out_to_seg(model, out)
-            dice_score = dice(segs, pred_segs)
-
-            results.train_loss[j].append(out.loss.item())
-            results.train_dice[j].append(dice_score)
-
-            out.loss.backward()
-            optimizers[j].step()
-            optimizers[j].zero_grad()
-            schedulers[j].step()
 
     log.section("Saving")
     results.save("tumor_segmentation")

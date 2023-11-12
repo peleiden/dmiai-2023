@@ -89,9 +89,10 @@ def dataloader(train_cfg: TrainConfig, images: np.ndarray, segmentations: np.nda
         batch_segmentations = segmentations[index]
         if augmentations is not None:
             for i in range(train_cfg.batch_size):
-                augmented = augmentations(image=batch_images[i], mask=batch_segmentations[i])
+                # Albuementations wants ints on boffa them
+                augmented = augmentations(image=batch_images[i], mask=(batch_segmentations[i] * 255))
                 batch_images[i] = augmented['image']
-                batch_segmentations[i] = augmented['mask']
+                batch_segmentations[i] = augmented['mask'].astype(bool)
         yield batch_images, batch_segmentations
 
 def dice(target: np.ndarray, pred: np.ndarray) -> float:
