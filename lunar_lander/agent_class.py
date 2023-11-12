@@ -598,7 +598,7 @@ class agent_base():
                         best_score = mean_ret
                         if model_filename != None:
                             output_state_dicts[n_episode] = self.get_state()
-                            torch.save(output_state_dicts, model_filename + ".%i.pt" % i)
+                            torch.save(output_state_dicts, model_filename + ".best.pt")
                     if verbose:
                             # print training stats
                             if n_episode % 100 == 0 and n_episode > 0:
@@ -809,6 +809,8 @@ class dqn(agent_base):
             epsilon = self.epsilon
 
         if torch.rand(1).item() > epsilon:
+            if state[6] and state[7]:
+                return 0
             # 
             policy_net = self.neural_networks['policy_net']
             #
@@ -998,6 +1000,8 @@ class actor_critic(agent_base):
         for the n_action actions. The actor draws an action according to these
         probabilities pi(s).
         """
+        if state[6] and state[7]:
+            return 0
         actor_net = self.neural_networks['policy_net']
 
         with torch.no_grad():

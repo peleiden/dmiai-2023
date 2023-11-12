@@ -21,7 +21,7 @@ def make_parameter_sets() -> list[dict]:
     layers = [[128, 32], [32, 32], [256, 128, 32]]
     memories = [20000]
     training_strides = [3, 5, 10]
-    batch_sizes = [8, 32]
+    batch_sizes = [8, 32, 64]
     discount_factors = [0.97, 0.99, 0.995]
     epsilons = [0.1, 0.01]
 
