@@ -42,7 +42,7 @@ def out_to_seg(out) -> np.ndarray:
     return segs
 
 for i in range(config.batches):
-    if i % 2 == 0:
+    if i % 10 == 0:
         ims, segs = next(test_dataloader)
         all_pred_segs = list()
         for j, model in enumerate(models):

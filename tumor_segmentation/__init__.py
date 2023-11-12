@@ -14,7 +14,7 @@ class TrainConfig(DataStorage):
     batch_size: int = 20
     batches: int = 500
     num_models: int = 3
-    pretrain_path: str = "facebook/mask2former-swin-large-ade-semantic.json"
+    pretrain_path: str = "facebook/mask2former-swin-large-ade-semantic"
     train_test_split: float = 0.75
 
     def __post_init__(self):
