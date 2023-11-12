@@ -5,7 +5,7 @@ import numpy as np
 from collections import namedtuple, deque
 import random
 import torch
-from torch import nn
+import torch.nn as nn
 import copy
 import h5py
 import json
@@ -52,14 +52,15 @@ class neural_network(nn.Module):
         n_layers = len(layers)
         for i,neurons_in_current_layer in enumerate(layers[:-1]):
             #
-            self.network_layers.append(nn.Linear(neurons_in_current_layer, 
+            self.network_layers.append(nn.BatchNorm1d(neurons_in_current_layer))
+            self.network_layers.append(nn.Linear(neurons_in_current_layer,
                                                 layers[i+1]) )
             #
-            if i < n_layers - 2 and dropout:
+            if i == 1 and i < n_layers - 1 and dropout:
                 self.network_layers.append( nn.Dropout(p=p_dropout) )
             #
-            if i < n_layers - 2:
-                self.network_layers.append( nn.ReLU() )
+            if i < n_layers - 1:
+                self.network_layers.append( nn.GELU() )
         #
         self.network_layers = nn.Sequential(*self.network_layers)
         #

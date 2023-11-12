@@ -15,11 +15,11 @@ from agent_class import make_agent
 def make_parameter_sets() -> list[dict]:
 
     types = ["dqn", "ddqn", "ac"]
-    layers = [[64], [128, 32], [128, 64, 32]]
-    dropouts = [0, 0.2, 0.5]
+    layers = [[128, 32]]
+    dropouts = [0]
     memories = [5000, 20000, 50000]
     training_strides = [3, 5, 10]
-    batch_sizes = [16, 32, 128]
+    batch_sizes = [32]
     discount_factors = [0.98, 0.99, 0.995]
 
     parameter_sets = list()
@@ -38,7 +38,7 @@ def make_parameter_sets() -> list[dict]:
             'batch_size': batch_size,
             'saving_stride': 500,
             #
-            'n_episodes_max': 20000,
+            'n_episodes_max': 10000,
             'n_solving_episodes': 100,
             'solving_threshold_min': 250,
             'solving_threshold_mean': 270,
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         env = gym.make('LunarLander-v2')
         parameter_sets = make_parameter_sets()
         random.shuffle(parameter_sets)
-        agents_per_parameter = 10
+        agents_per_parameter = 5
         log(
             f"Got {len(parameter_sets):,} parameter sets",
             f"Training {agents_per_parameter * len(parameter_sets):,} agents",
