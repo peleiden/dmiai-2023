@@ -78,14 +78,14 @@ def mask2former_seg(img: np.ndarray) -> np.ndarray:
     seg_placeholder = np.zeros_like(img)[..., 0].astype(bool)
 
     all_pred_segs = list()
-    for i, model in enumerate(models):
+    for model in models:
         out = model([img], [seg_placeholder])
         seg = model.processor.post_process_semantic_segmentation(out)[0]
         seg = seg.cpu().numpy().astype(np.uint8)
         seg = cv2.resize(seg, (img.shape[1], img.shape[0])).astype(bool)
         all_pred_segs.append(seg)
     seg = vote([all_pred_segs])
-    return seg
+    return seg[0]
 
 @app.route("/predict", methods=["POST"])
 @api_fun
@@ -97,7 +97,7 @@ def predict():
     # Replace this call
     # seg = threshold_seg(img)
     seg = mask2former_seg(img)
-    seg = seg_to_shitty_rgb(seg)[0]
+    seg = seg_to_shitty_rgb(seg)
     validate_segmentation(img_orig, seg)
     return { "img": encode_request(seg) }
 
@@ -117,5 +117,18 @@ if __name__ == "__main__":
     im = cv2.imread("tumor_segmentation/data/patients/imgs/patient_000.png")
     seg_true = cv2.imread("tumor_segmentation/data/patients/labels/segmentation_000.png")
     seg = mask2former_seg(im)
+
+    import matplotlib.pyplot as plt
+    import pelutils.ds.plots as plots
+    with plots.Figure("ex.png", figsize=(20, 8), tight_layout=False):
+        plt.subplot(141)
+        plt.imshow(im)
+        plt.title("Img")
+        plt.subplot(142)
+        plt.imshow(seg_true, cmap="gray")
+        plt.title("True")
+        plt.subplot(143)
+        plt.imshow(seg)
+        plt.title("Pred")
 
     app.run(host="0.0.0.0", port=6970, debug=False, processes=1, threaded=False)
