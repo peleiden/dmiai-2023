@@ -16,6 +16,7 @@ class TrainConfig(DataStorage):
     num_models: int = 3
     pretrain_path: str = "facebook/mask2former-swin-large-ade-semantic"
     train_test_split: float = 0.75
+    train_control_prob: float = 0.5
 
     def __post_init__(self):
         assert self.num_models % 2 == 1

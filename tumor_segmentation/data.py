@@ -66,11 +66,17 @@ def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], 
     test_segmentations = _sel(segmentations, index[n_train:])
     return train_images, train_segmentations, test_images, test_segmentations
 
-def dataloader(train_cfg: TrainConfig, images: list[np.ndarray], segmentations: list[np.ndarray], augmentations=None):
+def dataloader(train_cfg: TrainConfig, images: list[np.ndarray], segmentations: list[np.ndarray], augmentations=None, n_control=None,  is_test=False):
     assert len(images) == len(segmentations)
     n = len(images)
     while True:
-        index = np.random.randint(0, n, train_cfg.batch_size)
+        if is_test:
+            yield images, segmentations
+        if n_control is None:
+            index = np.random.randint(0, n, train_cfg.batch_size)
+        else:
+            control_batch = int(train_cfg.batch_size * train_cfg.train_control_prob)
+            index = np.concatenate((np.random.randint(0, n_control, control_batch), np.random.randint(n_control, n, train_cfg.batch_size - control_batch)))
         batch_images = _sel(images, index)
         batch_segmentations = _sel(segmentations, index)
         if augmentations is not None:

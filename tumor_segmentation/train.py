@@ -49,6 +49,7 @@ def train(args: JobDescription):
         lr=args.lr,
         batches=args.batches,
         batch_size=args.batch_size,
+        train_control_prob=args.train_control_prob,
     )
     config.save(os.path.join(args.location, "tumor_segmentation"))
 
@@ -59,8 +60,8 @@ def train(args: JobDescription):
     train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files))
 
     augmentations = None if args.no_augment else get_augmentation_pipeline()
-    train_dataloader = dataloader_(config, train_images, train_segmentations, augmentations)
-    test_dataloader = dataloader_(config, test_images, test_segmentations)
+    train_dataloader = dataloader_(config, train_images, train_segmentations, augmentations=augmentations, n_control=len(control_files))
+    test_dataloader = dataloader_(config, test_images, test_segmentations, is_test=True)
 
     models: list[TumorBoi] = list()
     optimizers = list()
@@ -78,11 +79,13 @@ def train(args: JobDescription):
         for j, model in enumerate(models):
             ims, segs = next(train_dataloader)
             out = model(ims, segs)
-            log("Train %i, %i: %.2f" % (i, j, out.loss))
 
             pred_segs = out_to_seg(model, out, [seg.shape for seg in segs])
             dice_score = dice(segs, pred_segs)
-
+            log(
+                "Train %i, %i: %.2f" % (i, j, out.loss.item()),
+                "              %.2f" % dice_score,
+            )
             results.train_loss[j].append(out.loss.item())
             results.train_dice[j].append(dice_score)
 
@@ -126,9 +129,10 @@ def train(args: JobDescription):
 if __name__ == "__main__":
     parser = Parser(
         Option("base-model", default="facebook/mask2former-swin-large-ade-semantic"),
-        Option("train-split", default=0.5), # prop of tumor images to train on
+        Option("train-split", default=0.80), # prop of tumor images to train on
+        Option("train-control-prob", default=0.5),
         Option("num-models", default=1),
-        Option("lr", default=1e-5),
+        Option("lr", default=5e-5),
         Option("batches", default=500),
         Option("batch-size", default=32),
         Option("val-every", default=10),
