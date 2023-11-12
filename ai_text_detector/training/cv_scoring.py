@@ -23,7 +23,7 @@ def extract_accuracies_from_logs(directory):
                     accuracies.append(accuracy)
     return accuracies
 
-LOG_DIR = "/work3/s183911/dmiai/moar-lower"
+LOG_DIR = "/work3/s183911/dmiai/no-wd"
 
 def main():
     accuracies = extract_accuracies_from_logs(LOG_DIR)

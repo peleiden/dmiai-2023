@@ -1,15 +1,16 @@
+
 #!/bin/sh
-#BSUB -q gpuh100
+#BSUB -q gpuv100
 #BSUB -gpu "num=1::mode=exclusive_process"
-##BSUB -R "select[gpu32gb]"
+##BSUB -R "select[gpu80gb]"
 
 #BSUB -n 4
-#BSUB -R "rusage[mem=20GB]"
+#BSUB -R "rusage[mem=50GB]"
 #BSUB -R "span[hosts=1]"
 
 #BSUB -W 5:00
 
-#BSUB -J "tumor"
+#BSUB -J "moar-epochs"
 #BSUB -N
 #BSUB -u s183911@student.dtu.dk
 #BSUB -oo /zhome/ac/c/137651/joblogs/stdout_%J.out
@@ -17,15 +18,14 @@
 
 echo "Starting job on GPU $CUDA_VISIBLE_DEVICES ..."
 
-TPATH=/work3/s183911/toomah
-TPATH=/zhome/ac/c/137651/dmiai/local-data/toomah
-export HUGGINGFACE_HUB_CACHE=/zhome/ac/c/137651/.shitty_hf_cache
+TPATH=/work3/s183911/dmiai
 source /zhome/ac/c/137651/dmiai-setup.sh
-export PYTHONPATH=$PYTHONPATH:.
 
-python tumor_segmentation/train.py\
-    $TPATH\
-    -c tumor_segmentation/jobs/funnystuff.ini
+python ai_text_detector/training/hf_loop.py\
+    $TPATH/even-moar-no-wd\
+    -c ai_text_detector/training/moar-epochs.ini\
+    --weight-decay 0.0\
+    --epochs 10
 
 
 
