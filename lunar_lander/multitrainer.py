@@ -1,10 +1,12 @@
 import itertools
+import multiprocessing as mp
 import os
 import random
 import shutil
 
 import gymnasium as gym
 import numpy as np
+import torch
 from pelutils import log
 
 from agent_class import make_agent
@@ -45,14 +47,19 @@ def make_parameter_sets() -> list[dict]:
 
     return parameter_sets
 
-def train_agent(index: int, parameters: dict) -> dict:
+def train_agent(args: tuple) -> dict:
+    index, parameters = args
+    log(f"Training agent {index:,}")
     model_file = f"trained-agents/agent-{index}-{parameters['type']}"
     agent = make_agent(parameters)
-    return agent.train(env, verbose=True, model_filename=model_file, training_filename=model_file+".måskejson")
+    results = agent.train(env, verbose=False, model_filename=model_file, training_filename=model_file+".måskejson")
+    log("Agent %i mean return of last 100 episodes: %.2f" % (index, np.mean(results["epsiode_returns"][-100:])))
+    return results
 
 if __name__ == "__main__":
-    log.configure("lunar-training.log")
     with log.log_errors:
+        log.configure("lunar-training.log")
+        torch.set_num_threads(1)
         shutil.rmtree("trained-agents", ignore_errors=True)
         os.makedirs("trained-agents", exist_ok=True)
         env = gym.make('LunarLander-v2')
@@ -64,7 +71,5 @@ if __name__ == "__main__":
             f"Training {agents_per_parameter * len(parameter_sets):,} agents",
         )
         args = list(enumerate(parameter_sets * agents_per_parameter))
-        for i, parameters in enumerate(parameter_sets * agents_per_parameter):
-            log(f"Parameter set {i + 1:,} / {len(parameter_sets)}")
-            results = train_agent(i, parameters)
-            log("Mean of last 100 episodes: %.2f" % np.mean(results["epsiode_returns"][-100:]))
+        with mp.Pool(mp.cpu_count()) as pool:
+            pool.map(train_agent, args, chunksize=1)
