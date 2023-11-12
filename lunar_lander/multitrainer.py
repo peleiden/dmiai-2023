@@ -12,7 +12,7 @@ from pelutils import log
 
 from agent_class import make_agent
 
-work3 = False
+work3 = True
 path = "/work3/s183912/trained-agents" if work3 else "trained-agents"
 
 def make_parameter_sets() -> list[dict]:
