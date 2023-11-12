@@ -8,61 +8,7 @@ import numpy as np
 import itertools 
 import h5py 
 
-import agent_class as agent
-# agent_class defines
-# - class "neural_network"
-# - class "agent"
-# - function "train_agent"
-
-
-#############################################################################
-# This code runs the gym environment "LunarLander-v2" using a trained agent #
-#############################################################################
-
-# Example for run from command line:
-#
-#   python run_agent.py --f my_file --verbose --overwrite --N 500
-#
-# This command loads the agent state stored in my_file.tar, uses this agent
-# to run N = 500 episodes of the LunarLander-v2 environment, and stores the
-# resulting list of returns per episode and duration per episode in the file
-# my_file_trajs.h5
-# 
-# Because of the flag "--verbose", the simulation progress is printed to
-# the terminal. Default is False, so that nothing is printed.
-# Because of the flag "--overwrite", a possibly existing file my_file_trajs.h5
-# will be overwritten. Default is False, and the program stops if it finds an
-# existing file my_file_trajs.h5.
-#
-
-# Parse command line arguments
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--f',type=str, default='my_agent',
-#         help='input/output filename (suffix will be added by script)')
-# parser.add_argument('--N',type=int, default=1000,
-#         help='number of simulations')
-# parser.add_argument('--verbose', action='store_true')
-# parser.set_defaults(verbose=False)
-# parser.add_argument('--overwrite', action='store_true')
-# parser.set_defaults(overwrite=False)
-# parser.add_argument('--dqn', action='store_true') # use this flag to train 
-#                                                 # via deep Q-learning
-# parser.add_argument('--ddqn', action='store_true') # use this flag to train 
-#                                                 # via double deep Q-learning
-# parser.set_defaults(dqn=False)
-# parser.set_defaults(ddqn=False)
-# args = parser.parse_args()
-
-# # Create input and output filenames
-# input_filename = '{0}.tar'.format(args.f)
-# output_filename = '{0}_trajs.tar'.format(args.f)
-# N = args.N
-# verbose=args.verbose
-# overwrite=args.overwrite
-# dqn=args.dqn
-# ddqn=args.ddqn
-# if ddqn:
-#     dqn = True
+import lunar_lander.agent_class as agent
 
 def load_agent(input_filename: str, dqn: bool):
     with open(input_filename,'rb') as f:

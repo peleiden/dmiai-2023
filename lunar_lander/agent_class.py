@@ -5,11 +5,11 @@ import numpy as np
 from collections import namedtuple, deque
 import random
 import torch
-import torch.nn as nn
+from torch import nn
 import copy
 import h5py
-import json
 device = torch.device("cpu")
+import json
 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #device = 'mps'
 import warnings
@@ -52,15 +52,14 @@ class neural_network(nn.Module):
         n_layers = len(layers)
         for i,neurons_in_current_layer in enumerate(layers[:-1]):
             #
-            self.network_layers.append(nn.BatchNorm1d(neurons_in_current_layer))
-            self.network_layers.append(nn.Linear(neurons_in_current_layer,
+            self.network_layers.append(nn.Linear(neurons_in_current_layer, 
                                                 layers[i+1]) )
             #
-            if i == 1 and i < n_layers - 1 and dropout:
+            if dropout:
                 self.network_layers.append( nn.Dropout(p=p_dropout) )
             #
-            if i < n_layers - 1:
-                self.network_layers.append( nn.GELU() )
+            if i < n_layers - 2:
+                self.network_layers.append( nn.ReLU() )
         #
         self.network_layers = nn.Sequential(*self.network_layers)
         #
@@ -98,7 +97,7 @@ class agent_base():
         self.set_initialization_parameters(parameters=parameters)
         #
         # get dictionary with default parameters
-        default_parameters = self.get_default_parameters(parameters['layers'])
+        default_parameters = self.get_default_parameters(parameters["layers"])
         # for all parameters not set by the input dictionary, add the 
         # respective default parameter
         parameters = self.merge_dictionaries(dict1=parameters,
@@ -151,17 +150,16 @@ class agent_base():
         '''
         #
         parameters = {
-            'type': 'dqn',
             'neural_networks':
                 {
                 'policy_net':{
-                    'layers': layers,
+                    'layers':layers,
                             }
                 },
             'optimizers':
                 {
                 'policy_net':{
-                    'optimizer':'AdamW',
+                    'optimizer':'RMSprop',
                      'optimizer_args':{'lr':1e-3}, # learning rate
                             }
                 },
@@ -183,7 +181,7 @@ class agent_base():
             'solving_threshold_mean':230,
             #
             'discount_factor':0.99,
-            }
+        }
         #
         # in case at some point the above dictionary is edited and an upper
         # case key is added:
@@ -284,16 +282,18 @@ class agent_base():
 
         self.neural_networks = {}
         for key, value in neural_networks.items():
-            self.neural_networks[key] = neural_network(value['layers'], dropout=True, p_dropout=self.parameters['dropout']).to(device)
+            self.neural_networks[key] = neural_network(value['layers']).to(device)
         
     def initialize_optimizers(self,optimizers):
         """Initialize optimizers"""
 
         self.optimizers = {}
+        self.schedulers = {}
         for key, value in optimizers.items():
-            self.optimizers[key] = torch.optim.AdamW(
+            self.optimizers[key] = torch.optim.RMSprop(
                         self.neural_networks[key].parameters(),
                             **value['optimizer_args'])
+            self.optimizers[key] = torch.optim.lr_scheduler.ExponentialLR(self.optimizers[key], 0.99)
     
     def initialize_losses(self,losses):
         """Instantiate loss functions"""
@@ -544,11 +544,13 @@ class agent_base():
                         "| {0: 7d} |   {1: 10.3f}    |     "
                         "{2: 10.3f}      |    {3: 10.3f}      |")
         #
+        self.scheduler = torch.optim.lr_scheduler.ExponentialLR()
         for n_episode in range(self.n_episodes_max):
             #
             # reset environment and reward of current episode
             state, info = environment.reset()
             current_total_reward = 0.
+            best_score = -1000
             #
             for i in itertools.count(): # timesteps of environment
                 #
@@ -591,6 +593,16 @@ class agent_base():
                     training_complete, min_ret, mean_ret = \
                             self.evaluate_stopping_criterion(\
                                 list_of_returns=episode_returns)
+                    if mean_ret > best_score:
+                        if verbose:
+                            print("New best score: %.2f" % mean_ret)
+                        best_score = mean_ret
+                        if model_filename != None:
+                            output_state_dicts[n_episode] = self.get_state()
+                            torch.save(output_state_dicts, model_filename + ".%i.pt" % i)
+                if training_filename != None:
+                    self.save_dictionary(dictionary=training_results,
+                                        filename=training_filename)
                     if verbose:
                             # print training stats
                             if n_episode % 100 == 0 and n_episode > 0:
@@ -615,9 +627,9 @@ class agent_base():
                 if model_filename != None:
                     output_state_dicts[n_episode] = self.get_state()
                     torch.save(output_state_dicts, model_filename + ".pt")
-                #
                 with open(model_filename + ".json", "w") as f:
-                    json.dump(self.parameters, f, indent=4)
+                    json.dump(self.parameters, f)
+                #
                 training_results = {'episode_durations':episode_durations,
                             'epsiode_returns':episode_returns,
                             'n_training_epochs':training_epochs,
@@ -720,6 +732,7 @@ class dqn(agent_base):
         default_parameters['d_epsilon'] = 0.00005 # decrease of epsilon
             # after each training epoch
         #
+        default_parameters['doubledqn'] = False
         #
         return default_parameters
 
@@ -732,7 +745,7 @@ class dqn(agent_base):
         # Use deep Q-learning or double deep Q-learning? #
         ##################################################
         try: # False -> use DQN; True -> use double DQN
-            self.doubleDQN = parameters['type'] == "ddqn"
+            self.doubleDQN = parameters['doubledqn']
         except KeyError:
             pass
         #
@@ -796,9 +809,6 @@ class dqn(agent_base):
         algorithm for action selection
         """
         #
-        if state[6] and state[7]:
-            return 0
-
         if self.in_training:
             epsilon = self.epsilon
 
@@ -808,7 +818,7 @@ class dqn(agent_base):
             #
             with torch.no_grad():
                 policy_net.eval()
-                action = policy_net(torch.tensor(state)).argmax(0).item()
+                action = policy_net(torch.tensor(state).unsqueeze(0))[0].argmax(0).item()
                 policy_net.train()
                 return action
         else:
@@ -848,6 +858,7 @@ class dqn(agent_base):
         target_net = self.neural_networks['target_net']
         #
         optimizer = self.optimizers['policy_net']
+        scheduler = self.schedulers['policy_net']
         loss = self.losses['policy_net']
         #
         policy_net.train() # turn on training mode
@@ -892,6 +903,7 @@ class dqn(agent_base):
         optimizer.zero_grad()
         loss_.backward()
         optimizer.step()
+        scheduler.step()
         #
         policy_net.eval() # turn off training mode
         #
@@ -900,7 +912,7 @@ class dqn(agent_base):
         if epoch % self.target_net_update_stride == 0:
             self.soft_update_target_net() # soft update target net
         #
-        
+
     def soft_update_target_net(self):
         """Soft update parameters of target net"""
         #
@@ -938,10 +950,10 @@ class actor_critic(agent_base):
         # add default parameters specific to the dqn algorithm
         default_parameters['neural_networks']['critic_net'] = {}
         default_parameters['neural_networks']['critic_net']['layers'] = \
-                    [*layers, 1] # needs to have scalar output
+                    [self.n_state,64,32,1] # needs to have scalar output
         #
         default_parameters['optimizers']['critic_net'] = {
-                    'optimizer':'AdamW',
+                    'optimizer':'RMSprop',
                      'optimizer_args':{'lr':1e-3}, # learning rate
                             }
         #
@@ -997,15 +1009,13 @@ class actor_critic(agent_base):
         for the n_action actions. The actor draws an action according to these
         probabilities pi(s).
         """
-        if state[6] and state[7]:
-            return 0
         actor_net = self.neural_networks['policy_net']
 
         with torch.no_grad():
             actor_net.eval()
             # see
             #https://pytorch.org/docs/stable/distributions.html#score-function
-            probs = self.Softmax(actor_net(torch.tensor(state)))
+            probs = self.Softmax(actor_net(torch.tensor(state).unsqueeze(0))[0])
             m = Categorical(probs)
             action = m.sample()
             actor_net.train()
@@ -1078,7 +1088,7 @@ class actor_critic(agent_base):
         #
 
 def make_agent(parameters: dict) -> agent_base:
-    if parameters["type"] == "dqn" or parameters["type"] == "ddqn":
+    if parameters["type"] == "dqn":
         return dqn(parameters)
     elif parameters["type"] == "ac":
         return actor_critic(parameters)
