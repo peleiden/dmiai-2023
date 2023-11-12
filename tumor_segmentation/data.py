@@ -44,8 +44,9 @@ def load_data(control_files: list[str], patient_files: list[str]) -> tuple[list[
         assert (im[..., 0] == im[..., 2]).all()
         assert (seg[..., 0] == seg[..., 1]).all()
         assert (seg[..., 0] == seg[..., 2]).all()
-        segmentations[i] = seg[..., 0]
-
+        seg = seg[..., 0]
+        assert ((seg == 0) | (seg == 255)).all()
+        segmentations[i] = np.round(seg / 255).astype(bool)
     return images, segmentations
 
 def _sel(arrays: list[np.ndarray], idx: np.ndarray) -> list[np.ndarray]:
@@ -72,6 +73,7 @@ def dataloader(train_cfg: TrainConfig, images: list[np.ndarray], segmentations: 
     while True:
         if is_test:
             yield images, segmentations
+            continue
         if n_control is None:
             index = np.random.randint(0, n, train_cfg.batch_size)
         else:
