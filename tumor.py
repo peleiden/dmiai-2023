@@ -107,7 +107,7 @@ if __name__ == "__main__":
         "tumor.log",
         append=True,
     )
-    config = TrainConfig.load(os.path.join(location, "tumor_segmentation"))
+    config = TrainConfig.load(os.path.join(location, "tumor-segmentation-config"))
     models: list[TumorBoi] = list()
     for i in range(config.num_models):
         model = TumorBoi(config).eval().to(device)
