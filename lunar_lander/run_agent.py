@@ -8,7 +8,7 @@ import numpy as np
 import itertools 
 import h5py 
 
-import lunar_lander.agent_class as agent
+import agent_class as agent
 # agent_class defines
 # - class "neural_network"
 # - class "agent"

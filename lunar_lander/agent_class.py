@@ -8,7 +8,8 @@ import torch
 from torch import nn
 import copy
 import h5py
-device = torch.device("cpu") 
+import json
+device = torch.device("cpu")
 #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #device = 'mps'
 import warnings
@@ -149,6 +150,7 @@ class agent_base():
         '''
         #
         parameters = {
+            'type': 'dqn',
             'neural_networks':
                 {
                 'policy_net':{
@@ -158,7 +160,7 @@ class agent_base():
             'optimizers':
                 {
                 'policy_net':{
-                    'optimizer':'RMSprop',
+                    'optimizer':'AdamW',
                      'optimizer_args':{'lr':1e-3}, # learning rate
                             }
                 },
@@ -288,7 +290,7 @@ class agent_base():
 
         self.optimizers = {}
         for key, value in optimizers.items():
-            self.optimizers[key] = torch.optim.RMSprop(
+            self.optimizers[key] = torch.optim.AdamW(
                         self.neural_networks[key].parameters(),
                             **value['optimizer_args'])
     
@@ -611,8 +613,10 @@ class agent_base():
                 #
                 if model_filename != None:
                     output_state_dicts[n_episode] = self.get_state()
-                    torch.save(output_state_dicts, model_filename)
+                    torch.save(output_state_dicts, model_filename + ".pt")
                 #
+                with open(model_filename + ".json", "w") as f:
+                    json.dump(self.parameters, f, indent=4)
                 training_results = {'episode_durations':episode_durations,
                             'epsiode_returns':episode_returns,
                             'n_training_epochs':training_epochs,
@@ -715,7 +719,6 @@ class dqn(agent_base):
         default_parameters['d_epsilon'] = 0.00005 # decrease of epsilon
             # after each training epoch
         #
-        default_parameters['doubledqn'] = False
         #
         return default_parameters
 
@@ -728,7 +731,7 @@ class dqn(agent_base):
         # Use deep Q-learning or double deep Q-learning? #
         ##################################################
         try: # False -> use DQN; True -> use double DQN
-            self.doubleDQN = parameters['doubledqn']
+            self.doubleDQN = parameters['type'] == "ddqn"
         except KeyError:
             pass
         #
@@ -792,6 +795,9 @@ class dqn(agent_base):
         algorithm for action selection
         """
         #
+        if state[6] and state[7]:
+            return 0
+
         if self.in_training:
             epsilon = self.epsilon
 
@@ -934,7 +940,7 @@ class actor_critic(agent_base):
                     [self.n_state,64,32,1] # needs to have scalar output
         #
         default_parameters['optimizers']['critic_net'] = {
-                    'optimizer':'RMSprop',
+                    'optimizer':'AdamW',
                      'optimizer_args':{'lr':1e-3}, # learning rate
                             }
         #
@@ -990,6 +996,8 @@ class actor_critic(agent_base):
         for the n_action actions. The actor draws an action according to these
         probabilities pi(s).
         """
+        if state[6] and state[7]:
+            return 0
         actor_net = self.neural_networks['policy_net']
 
         with torch.no_grad():
@@ -1068,4 +1076,9 @@ class actor_critic(agent_base):
         actor_net.eval()
         #
 
-
+def make_agent(parameters: dict) -> agent_base:
+    if parameters["type"] == "dqn" or parameters["type"] == "ddqn":
+        return dqn(parameters)
+    elif parameters["type"] == "ac":
+        return actor_critic(parameters)
+    raise ValueError(f"{parameters['type'] = }")
