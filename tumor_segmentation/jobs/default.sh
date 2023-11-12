@@ -1,10 +1,10 @@
 #!/bin/sh
-#BSUB -q gpuv100
+#BSUB -q gpua100
 #BSUB -gpu "num=1::mode=exclusive_process"
-##BSUB -R "select[gpu80gb]"
+#BSUB -R "select[gpu80gb]"
 
 #BSUB -n 4
-#BSUB -R "rusage[mem=50GB]"
+#BSUB -R "rusage[mem=20GB]"
 #BSUB -R "span[hosts=1]"
 
 #BSUB -W 5:00
@@ -23,8 +23,7 @@ export PYTHONPATH=$PYTHONPATH:.
 
 python tumor_segmentation/train.py\
     $TPATH\
-    --batches 20\
-    --batch-size 8
+    -c tumor_segmentation/jobs/funnystuff.ini
 
 
 

@@ -35,10 +35,10 @@ def plot(location: str, results: TrainResults, config: TrainConfig):
         plt.ylabel("Dice")
         plt.legend()
 
-def out_to_seg(model, out) -> list[np.ndarray]:
+def out_to_seg(model, out, original_shapes) -> list[np.ndarray]:
     segs = model.processor.post_process_semantic_segmentation(out)
     segs = [seg.cpu().numpy().astype(np.uint8) for seg in segs]
-    return [np.array(cv2.resize(seg, (400, 991)).astype(bool)) for seg in segs]
+    return [np.array(cv2.resize(seg, original_shape[::-1]).astype(bool)) for original_shape, seg in zip(original_shapes, segs)]
 
 def train(args: JobDescription):
     log("Training with", args)
@@ -80,7 +80,7 @@ def train(args: JobDescription):
             out = model(ims, segs)
             log("Train %i, %i: %.2f" % (i, j, out.loss))
 
-            pred_segs = out_to_seg(model, out)
+            pred_segs = out_to_seg(model, out, [seg.shape for seg in segs])
             dice_score = dice(segs, pred_segs)
 
             results.train_loss[j].append(out.loss.item())
@@ -92,13 +92,13 @@ def train(args: JobDescription):
             schedulers[j].step()
         if i % args.val_every == 0 or i == (config.batches - 1):
             ims, segs = next(test_dataloader)
-            all_pred_segs = [[] for _ in range(len(test_images))]
+            all_pred_segs = [[] for _ in range(len(ims))]
             for j, model in enumerate(models):
                 img_idx = 0
                 model.eval()
                 with torch.inference_mode():
                     out = model(ims, segs)
-                pred_segs = out_to_seg(model, out)
+                pred_segs = out_to_seg(model, out, [seg.shape for seg in segs])
                 for seg in pred_segs:
                     all_pred_segs[img_idx].append(seg)
                     img_idx += 1
