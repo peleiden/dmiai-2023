@@ -97,7 +97,7 @@ class agent_base():
         self.set_initialization_parameters(parameters=parameters)
         #
         # get dictionary with default parameters
-        default_parameters = self.get_default_parameters()
+        default_parameters = self.get_default_parameters(parameters['layers'])
         # for all parameters not set by the input dictionary, add the 
         # respective default parameter
         parameters = self.merge_dictionaries(dict1=parameters,
@@ -144,7 +144,7 @@ class agent_base():
         #
         return return_dict
 
-    def get_default_parameters(self):
+    def get_default_parameters(self, layers: list[int]):
         '''
         Create and return dictionary with the default parameters of the class
         '''
@@ -154,7 +154,7 @@ class agent_base():
             'neural_networks':
                 {
                 'policy_net':{
-                    'layers':[self.n_state,128,32,self.n_actions],
+                    'layers': layers,
                             }
                 },
             'optimizers':
@@ -166,7 +166,7 @@ class agent_base():
                 },
             'losses':
                 {
-                'policy_net':{            
+                'policy_net':{
                     'loss':'MSELoss',
                 }
                 },
@@ -693,13 +693,13 @@ class dqn(agent_base):
         super().__init__(parameters=parameters)
         self.in_training = False
 
-    def get_default_parameters(self):
+    def get_default_parameters(self, layers: list[int]):
         '''
         Create and return dictionary with the default parameters of the dqn
         algorithm
         '''
         #
-        default_parameters = super().get_default_parameters()
+        default_parameters = super().get_default_parameters(layers)
         #
         # add default parameters specific to the dqn algorithm
         default_parameters['neural_networks']['target_net'] = {}
@@ -930,14 +930,14 @@ class actor_critic(agent_base):
         self.Softmax = nn.Softmax(dim=0)
         self.LogSoftmax = nn.LogSoftmax(dim=1)
 
-    def get_default_parameters(self):
+    def get_default_parameters(self, layers: list[int]):
         #
-        default_parameters = super().get_default_parameters()
+        default_parameters = super().get_default_parameters(layers)
         #
         # add default parameters specific to the dqn algorithm
         default_parameters['neural_networks']['critic_net'] = {}
         default_parameters['neural_networks']['critic_net']['layers'] = \
-                    [self.n_state,64,32,1] # needs to have scalar output
+                    [*layers, 1] # needs to have scalar output
         #
         default_parameters['optimizers']['critic_net'] = {
                     'optimizer':'AdamW',
