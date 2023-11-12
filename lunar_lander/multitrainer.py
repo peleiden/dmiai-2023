@@ -50,7 +50,7 @@ def make_parameter_sets() -> list[dict]:
 def train_agent(args: tuple) -> dict:
     index, parameters = args
     log(f"Training agent {index:,}")
-    model_file = f"trained-agents/agent-{index}-{parameters['type']}"
+    model_file = f"/work3/s183912/trained-agents/agent-{index}-{parameters['type']}"
     agent = make_agent(parameters)
     results = agent.train(env, verbose=False, model_filename=model_file, training_filename=model_file+".måskejson")
     log("Agent %i mean return of last 100 episodes: %.2f" % (index, np.mean(results["epsiode_returns"][-100:])))
@@ -60,8 +60,8 @@ if __name__ == "__main__":
     with log.log_errors:
         log.configure("lunar-training.log")
         torch.set_num_threads(1)
-        shutil.rmtree("trained-agents", ignore_errors=True)
-        os.makedirs("trained-agents", exist_ok=True)
+        shutil.rmtree("/work3/s183912/trained-agents", ignore_errors=True)
+        os.makedirs("/work3/s183912/trained-agents", exist_ok=True)
         env = gym.make('LunarLander-v2')
         parameter_sets = make_parameter_sets()
         random.shuffle(parameter_sets)
