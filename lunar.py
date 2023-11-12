@@ -24,8 +24,9 @@ log.configure(
     "lunar.log",
     print_level=0,
 )
-agent = load_agent("lunar_lander/agent-dqn.pt", True)
+agent = load_agent("lunar_lander/agent-dqn.pt")
 
+gameno = 0
 @router.post('/predict', response_model=LunarLanderPredictResponseDto)
 def predict(request: LunarLanderPredictRequestDto):
     global gameno

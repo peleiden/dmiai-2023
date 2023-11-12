@@ -10,7 +10,7 @@ import h5py
 
 import lunar_lander.agent_class as agent
 
-def load_agent(input_filename: str, dqn: bool):
+def load_agent(input_filename: str):
     with open(input_filename,'rb') as f:
         input_dictionary = torch.load(f)
 
@@ -20,10 +20,7 @@ def load_agent(input_filename: str, dqn: bool):
 
     parameters = input_dictionary['parameters']
     # Instantiate agent class
-    if dqn:
-        my_agent = agent.dqn(parameters=parameters)
-    else:
-        my_agent = agent.actor_critic(parameters=parameters)
+    my_agent = agent.make_agent(parameters)
 
     my_agent.load_state(state=input_dictionary)
     return my_agent
