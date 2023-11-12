@@ -10,7 +10,7 @@ from transformers import get_linear_schedule_with_warmup
 
 from tumor_segmentation import device, TrainConfig, TrainResults
 from tumor_segmentation.data import dice, get_data_files, load_data, split_train_test, dataloader as dataloader_, vote, get_augmentation_pipeline
-from tumor_segmentation.model import TumorBoi
+from tumor_segmentation.model import UNETTTT, TumorBoi
 
 
 def plot(location: str, results: TrainResults, config: TrainConfig):
@@ -34,11 +34,6 @@ def plot(location: str, results: TrainResults, config: TrainConfig):
         plt.xlabel("Batch")
         plt.ylabel("Dice")
         plt.legend()
-
-def out_to_seg(model, out, original_shapes) -> list[np.ndarray]:
-    segs = model.processor.post_process_semantic_segmentation(out)
-    segs = [seg.cpu().numpy().astype(np.uint8) for seg in segs]
-    return [np.array(cv2.resize(seg, original_shape[::-1]).astype(bool)) for original_shape, seg in zip(original_shapes, segs)]
 
 def train(args: JobDescription):
     log("Training with", args)
@@ -67,20 +62,19 @@ def train(args: JobDescription):
     optimizers = list()
     schedulers = list()
     for i in range(config.num_models):
-        model = TumorBoi(config).to(device)
+        model = UNETTTT(config).to(device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
         scheduler = get_linear_schedule_with_warmup(optimizer, int(0.06 * config.batches), config.batches)
         models.append(model)
         optimizers.append(optimizer)
         schedulers.append(scheduler)
 
-
     for i in range(config.batches):
         for j, model in enumerate(models):
             ims, segs = next(train_dataloader)
             out = model(ims, segs)
 
-            pred_segs = out_to_seg(model, out, [seg.shape for seg in segs])
+            pred_segs = model.out_to_segs(out, [seg.shape for seg in segs])
             dice_score = dice(segs, pred_segs)
             log(
                 "Train %i, %i: %.2f" % (i, j, out.loss.item()),
@@ -101,7 +95,7 @@ def train(args: JobDescription):
                 model.eval()
                 with torch.inference_mode():
                     out = model(ims, segs)
-                pred_segs = out_to_seg(model, out, [seg.shape for seg in segs])
+                pred_segs = model.out_to_segs(out, [seg.shape for seg in segs])
                 for seg in pred_segs:
                     all_pred_segs[img_idx].append(seg)
                     img_idx += 1

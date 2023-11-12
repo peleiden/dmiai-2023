@@ -80,9 +80,7 @@ def mask2former_seg(img: np.ndarray) -> np.ndarray:
     all_pred_segs = list()
     for model in models:
         out = model([img], [seg_placeholder])
-        seg = model.processor.post_process_semantic_segmentation(out)[0]
-        seg = seg.cpu().numpy().astype(np.uint8)
-        seg = cv2.resize(seg, (img.shape[1], img.shape[0])).astype(bool)
+        seg = model.out_to_seg(out, img)
         all_pred_segs.append(seg)
     seg = vote([all_pred_segs])
     return seg[0]
