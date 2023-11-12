@@ -1,3 +1,4 @@
+import os
 import base64
 import json
 from functools import wraps
@@ -83,7 +84,7 @@ def mask2former_seg(img: np.ndarray) -> np.ndarray:
         seg = seg.cpu().numpy().astype(np.uint8)
         seg = cv2.resize(seg, (img.shape[1], img.shape[0])).astype(bool)
         all_pred_segs.append(seg)
-    seg = vote(segs)
+    seg = vote([all_pred_segs])
     return seg
 
 @app.route("/predict", methods=["POST"])
@@ -96,7 +97,7 @@ def predict():
     # Replace this call
     # seg = threshold_seg(img)
     seg = mask2former_seg(img)
-    seg = seg_to_shitty_rgb(seg)
+    seg = seg_to_shitty_rgb(seg)[0]
     validate_segmentation(img_orig, seg)
     return { "img": encode_request(seg) }
 
