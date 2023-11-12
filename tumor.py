@@ -83,7 +83,6 @@ def mask2former_seg(img: np.ndarray) -> np.ndarray:
         seg = seg.cpu().numpy().astype(np.uint8)
         seg = cv2.resize(seg, (img.shape[1], img.shape[0])).astype(bool)
         all_pred_segs.append(seg)
-    segs = np.array(all_pred_segs)
     seg = vote(segs)
     return seg
 
@@ -102,15 +101,16 @@ def predict():
     return { "img": encode_request(seg) }
 
 if __name__ == "__main__":
+    location = "local-data/standard"
     log.configure(
         "tumor.log",
         append=True,
     )
-    config = TrainConfig.load("tumor_segmentation")
+    config = TrainConfig.load(os.path.join(location, "tumor_segmentation"))
     models: list[TumorBoi] = list()
     for i in range(config.num_models):
         model = TumorBoi(config).eval().to(device)
-        model.load_state_dict(torch.load("tumor_segmentation/tumor_model_%i.pt" % i, map_location=device))
+        model.load_state_dict(torch.load(os.path.join(location, "tumor_model_%i.pt") % i, map_location=device))
         models.append(model)
 
     im = cv2.imread("tumor_segmentation/data/patients/imgs/patient_000.png")
