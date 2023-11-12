@@ -1,0 +1,10 @@
+- Lækkert træningsscript a la alpha-myretuen
+    - Flertrådet
+- Agenttype skal gemmes som modelparameter
+- Streng evualering
+- Ensemble
+- Indfør hvis-udsagn i agent.act
+- Modelstørrelse
+- Modelarkitektur
+- Hyperparametre
+- Ændre, hvornår træning terminerer
