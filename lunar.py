@@ -41,7 +41,7 @@ def predict(request: LunarLanderPredictRequestDto):
     else:
         action = agent.act(obs)
 
-    log.debug(f"{gameno} {game_ticks:02} {action} {reward:2f} {total_reward:2f}")
     if is_terminal:
+        log.debug(f"{gameno} {game_ticks:02} {action} {reward:2f} {total_reward:2f}")
         gameno += 1
     return LunarLanderPredictResponseDto(action=action)
