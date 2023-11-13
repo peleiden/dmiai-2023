@@ -12,7 +12,7 @@ from pelutils import log
 
 from agent_class import make_agent
 
-work3 = False
+work3 = True
 path = "/work3/s183912/trained-agents" if work3 else "trained-agents"
 
 def make_parameter_sets() -> list[dict]:
@@ -45,7 +45,7 @@ def make_parameter_sets() -> list[dict]:
             'batch_size': batch_size,
             'saving_stride': 500,
             #
-            'n_episodes_max': 5000,
+            'n_episodes_max': 7000,
             'n_solving_episodes': 69,
             'solving_threshold_min': 250,
             'solving_threshold_mean': 300,

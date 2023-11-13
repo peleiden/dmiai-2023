@@ -16,7 +16,7 @@ from run_agent import load_agent
 from agent_class import agent_base
 
 
-n = 100
+n = 200
 env = gym.make('LunarLander-v2')
 
 def evaluate(agent: agent_base):
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     all_rewards = list()
     all_gameticks = list()
 
+    print("Starting")
     for path in tqdm(paths, position=0):
         try:
             agent = load_agent(path)
@@ -81,6 +82,7 @@ if __name__ == "__main__":
         plt.xlabel("Game ticks")
         plt.ylabel("Reward")
         plt.title("Max game ticks / min reward")
+        plt.ylim(bottom=-50)
 
     with open("eval.pkl", "wb") as f:
         pickle.dump((all_paths, all_rewards, all_gameticks), f)
