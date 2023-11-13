@@ -53,7 +53,7 @@ class neural_network(nn.Module):
         n_layers = len(layers)
         for i,neurons_in_current_layer in enumerate(layers[:-1]):
             #
-            if parameters["bnorm"]:
+            if parameters.get("bnorm", False):
                 self.network_layers.append(nn.BatchNorm1d(neurons_in_current_layer))
             self.network_layers.append(nn.Linear(neurons_in_current_layer, 
                                                 layers[i+1]) )
