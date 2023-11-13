@@ -7,13 +7,13 @@ import albumentations as A
 
 from tumor_segmentation import TrainConfig
 
-def get_augmentation_pipeline():
+def get_augmentation_pipeline(p: float):
     return A.Compose([
-        A.HorizontalFlip(p=0.2),
-        A.Rotate(limit=5, p=0.2),
-        A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=0.2),
-        A.ElasticTransform(alpha=1, sigma=50, alpha_affine=50, p=0.2),
-        A.GaussNoise(var_limit=(10, 50), p=0.2),
+        A.HorizontalFlip(p=p),
+        A.Rotate(limit=5, p=p),
+        A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=p),
+        A.ElasticTransform(alpha=1, sigma=50, alpha_affine=50, p=p),
+        A.GaussNoise(var_limit=(10, 50), p=p),
         # TODO: Add cropping which removes part of inputs but requires reconsideration of padding
     ])
 
@@ -57,6 +57,7 @@ def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], 
     control_segmentations, segmentations = segmentations[:n_control], segmentations[n_control:]
     n = len(images)
     index = np.arange(n)
+    np.random.seed(420)
     np.random.shuffle(index)  # inplace >:(
     n_train = int(train_cfg.train_test_split * n)
 

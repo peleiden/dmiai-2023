@@ -20,6 +20,7 @@ class TumorBoi(nn.Module):
             config = self.config.config,
             ignore_mismatched_sizes = True,
         )
+        self._set_dropouts(self.config.dropout)
 
     def forward(self, images: list[np.ndarray], labels: list[np.ndarray]):
         inputs = self.processor.preprocess(images, labels, return_tensors="pt")
@@ -42,6 +43,12 @@ class TumorBoi(nn.Module):
         segs = self.processor.post_process_semantic_segmentation(out)
         segs = [seg.cpu().numpy().astype(np.uint8) for seg in segs]
         return [np.array(cv2.resize(seg, original_shape[::-1]).astype(bool)) for original_shape, seg in zip(original_shapes, segs)]
+
+    def _set_dropouts(self, p: float):
+        for module in self.modules():
+            if isinstance(module, nn.Dropout):
+                module.p = p
+
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(ConvBlock, self).__init__()
@@ -53,7 +60,7 @@ class ConvBlock(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )
-    
+
     def forward(self, x):
         return self.block(x)
 
@@ -64,10 +71,10 @@ class DownConv(nn.Module):
             ConvBlock(in_channels, out_channels),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
-        
+
     def forward(self, x):
         return self.sequence(x)
-        
+
 class UpConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(UpConv, self).__init__()
@@ -75,10 +82,10 @@ class UpConv(nn.Module):
             nn.ConvTranspose2d(in_channels, in_channels, kernel_size=2, stride=2),
             ConvBlock(in_channels, out_channels)
         )
-        
+
     def forward(self, x):
         return self.sequence(x)
-        
+
 class UNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=1):
         super(UNet, self).__init__()
@@ -89,9 +96,9 @@ class UNet(nn.Module):
             DownConv(128, 256), #32
             DownConv(256, 512) #16
         ])
-        
+
         self.bottleneck = ConvBlock(512, 1024)
-        
+
         #extra channels allow for concatenation of skip connections in upsampling block
         self.decoder = nn.ModuleList([
             UpConv(512+1024,512), #32
@@ -99,24 +106,24 @@ class UNet(nn.Module):
             UpConv(128+256,128), #128
             UpConv(64+128,64) #256
         ])
-        
+
         self.output_conv = nn.Conv2d(64, out_channels, kernel_size=1)
-        
+
     def forward(self, x):
         skips = []
         o = x
         for layer in self.encoder:
             o = layer(o)
             skips.append(o)
-        
+
         o = self.bottleneck(o)
-        
+
         for i, layer in enumerate(self.decoder):
             #print(o.size())
             o = torch.cat((skips[len(skips)-i-1],o), dim=1)
             #print(o.size())
             o = layer(o)
-        
+
         return self.output_conv(o)
 class UNETTTT(nn.Module):
 
@@ -134,6 +141,7 @@ class UNETTTT(nn.Module):
         self.model = UNet()
         self.loss_fn = BinaryDiceLoss()
         self.bnorm = nn.BatchNorm2d(3)
+        self._set_dropouts(self.config.dropout)
 
     def forward(self, images: list[np.ndarray], labels: list[np.ndarray]):
         images = np.array([cv2.resize(im, (256, 256)) for im in images]) / 255
@@ -162,3 +170,8 @@ class UNETTTT(nn.Module):
             seg = np.round(seg).astype(bool)
             segs.append(seg)
         return segs
+
+    def _set_dropouts(self, p: float):
+        for module in self.modules():
+            if isinstance(module, nn.Dropout):
+                module.p = p

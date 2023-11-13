@@ -45,6 +45,7 @@ def train(args: JobDescription):
         batches=args.batches,
         batch_size=args.batch_size,
         train_control_prob=args.train_control_prob,
+        dropout=args.dropout,
     )
     config.save(os.path.join(args.location, "tumor-segmentation-config"))
 
@@ -54,7 +55,7 @@ def train(args: JobDescription):
     images, segmentations = load_data(control_files, patient_files)
     train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files))
 
-    augmentations = None if args.no_augment else get_augmentation_pipeline()
+    augmentations = None if args.no_augment else get_augmentation_pipeline(args.augment_prob)
     train_dataloader = dataloader_(config, train_images, train_segmentations, augmentations=augmentations, n_control=len(control_files))
     test_dataloader = dataloader_(config, test_images, test_segmentations, is_test=True)
 
@@ -64,7 +65,7 @@ def train(args: JobDescription):
     for i in range(config.num_models):
         model = UNETTTT(config).to(device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
-        scheduler = get_linear_schedule_with_warmup(optimizer, int(0.06 * config.batches), config.batches)
+        scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup_prop * config.batches), config.batches)
         models.append(model)
         optimizers.append(optimizer)
         schedulers.append(scheduler)
@@ -130,6 +131,9 @@ if __name__ == "__main__":
         Option("batches", default=500),
         Option("batch-size", default=32),
         Option("val-every", default=10),
+        Option("augment-prob", default=0.2),
+        Option("warmup-prop", default=0.06),
+        Option("dropout", default=0.0),
         Flag("no-augment"),
         multiple_jobs=True,
     )
