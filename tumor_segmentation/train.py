@@ -63,7 +63,7 @@ def train(args: JobDescription):
     optimizers = list()
     schedulers = list()
     for i in range(config.num_models):
-        model = UNETTTT(config).to(device)
+        model = (UNETTTT if args.unet else TumorBoi)(config).to(device)
         optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
         scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup_prop * config.batches), config.batches)
         models.append(model)
@@ -135,6 +135,7 @@ if __name__ == "__main__":
         Option("warmup-prop", default=0.06),
         Option("dropout", default=0.0),
         Flag("no-augment"),
+        Flag("unet"),
         multiple_jobs=True,
     )
 
