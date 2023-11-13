@@ -33,7 +33,6 @@ def load_h5_archive(path: str):
             segmentations.append(np.max(label_data, 1).squeeze()[::-1,:])
     return images, segmentations
 
-
 def load_data(control_files: list[str], patient_files: list[str], extra_patient_files: list[str]) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """ Returns stacked images and stacked segmentations. """
     label_files = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in patient_files + extra_patient_files]
@@ -50,7 +49,6 @@ def load_data(control_files: list[str], patient_files: list[str], extra_patient_
     segmentations = control_segmentations + patient_segmentations
     for seg in segmentations:
         seg[seg > 0] = 255
-
 
     for i, (im, seg) in enumerate(zip(images, segmentations, strict=True)):
         # Jeg stoler ikke på noget
@@ -69,9 +67,9 @@ def _sel(arrays: list[np.ndarray], idx: np.ndarray) -> list[np.ndarray]:
 
 def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], train_cfg: TrainConfig, n_control: int, n_extra: int) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     control_images, images = images[:n_control], images[n_control:]
-    images, extra_images = images[:n_extra], images[n_extra:]
+    images, extra_images = images[:-n_extra], images[-n_extra:]
     control_segmentations, segmentations = segmentations[:n_control], segmentations[n_control:]
-    segmentations, extra_segmentations = segmentations[:n_extra], segmentations[n_extra:]
+    segmentations, extra_segmentations = segmentations[:-n_extra], segmentations[-n_extra:]
     n = len(images)
     index = np.arange(n)
     np.random.seed(420)
@@ -83,6 +81,7 @@ def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], 
 
     test_images = _sel(images, index[n_train:])
     test_segmentations = _sel(segmentations, index[n_train:])
+
     return train_images, train_segmentations, test_images, test_segmentations
 
 def dataloader(train_cfg: TrainConfig, images: list[np.ndarray], segmentations: list[np.ndarray], augmentations=None, n_control=None,  is_test=False):

@@ -2,13 +2,16 @@ import os
 from pelutils import JobDescription, Option, Parser, log, Flag
 import matplotlib.pyplot as plt
 import pelutils.ds.plots as plots
+import numpy as np
 import torch
 from pelutils import log
 from transformers import get_linear_schedule_with_warmup
+from PIL import Image
 
 from tumor_segmentation import device, TrainConfig, TrainResults
 from tumor_segmentation.data import dice, get_data_files, load_data, split_train_test, dataloader as dataloader_, vote, get_augmentation_pipeline
 from tumor_segmentation.model import UNETTTT, TumorBoi
+from tumor_segmentation.mask_to_border import mask_to_border
 
 
 def plot(location: str, results: TrainResults, config: TrainConfig):
@@ -33,6 +36,16 @@ def plot(location: str, results: TrainResults, config: TrainConfig):
         plt.ylabel("Dice")
         plt.legend()
 
+def plot_samples(path: str, ims: list[np.ndarray], segs: list[np.ndarray], pred_segs: list[np.ndarray], *, train: bool) -> list[np.ndarray]:
+    ims = [im.copy() for im in ims]
+    for i, (im, seg, pred) in enumerate(zip(ims, segs, pred_segs, strict=True)):
+        true_border = mask_to_border(seg, padding=4 if train else 7)
+        pred_border = mask_to_border(pred, padding=4 if train else 7)
+        im[np.where(true_border)] = (0, 153, 255)
+        im[np.where(pred_border)] = (255, 153, 0)
+        Image.fromarray(im).save(os.path.join(path, ("train_%i.png" if train else "test_%i.png") % i))
+    return ims
+
 def train(args: JobDescription):
     log("Training with", args)
 
@@ -52,6 +65,14 @@ def train(args: JobDescription):
     control_files, patient_files, extra_patient_files = get_data_files()
     images, segmentations = load_data(control_files, patient_files, extra_patient_files)
     train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files), len(extra_patient_files))
+
+    log(
+        f"{len(train_images) = :,}",
+        f"{len(test_images) = :,}",
+        f"{len(control_files) = :,}",
+        f"{len(patient_files) = :,}",
+        f"{len(extra_patient_files) = :,}",
+    )
 
     augmentations = None if args.no_augment else get_augmentation_pipeline(args.augment_prob)
     train_dataloader = dataloader_(config, train_images, train_segmentations, augmentations=augmentations, n_control=len(control_files))
@@ -87,6 +108,7 @@ def train(args: JobDescription):
             optimizers[j].zero_grad()
             schedulers[j].step()
         if i % args.val_every == 0 or i == (config.batches - 1):
+            plot_samples(job.location, ims[:5], segs[:5], pred_segs[:5], train=True)
             ims, segs = next(test_dataloader)
             all_pred_segs = [[] for _ in range(len(ims))]
             for j, model in enumerate(models):
@@ -111,6 +133,7 @@ def train(args: JobDescription):
             dice_score = dice(segs, pred_segs)
             results.ensemble_dice.append(dice_score)
             results.test_batches.append(i)
+            plot_samples(job.location, ims[:5], segs[:5], pred_segs[:5], train=False)
 
     log.section("Saving")
     results.save(os.path.join(os.path.join(args.location, "tumor-segmentation-results")))
@@ -128,7 +151,7 @@ if __name__ == "__main__":
         Option("lr", default=5e-5),
         Option("batches", default=500),
         Option("batch-size", default=32),
-        Option("val-every", default=10),
+        Option("val-every", default=20),
         Option("augment-prob", default=0.2),
         Option("warmup-prop", default=0.06),
         Option("dropout", default=0.0),
