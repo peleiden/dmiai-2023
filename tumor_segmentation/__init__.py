@@ -15,7 +15,7 @@ class TrainConfig(DataStorage):
     batches: int = 500
     num_models: int = 3
     pretrain_path: str = "facebook/mask2former-swin-large-ade-semantic"
-    train_test_split: float = 0.75
+    splits: int = 5
     train_control_prob: float = 0.5
     dropout: float = 0.0
 

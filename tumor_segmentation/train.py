@@ -50,7 +50,7 @@ def train(args: JobDescription):
     log("Training with", args)
 
     config = TrainConfig(
-        train_test_split=args.train_split,
+        splits=args.splits,
         num_models=args.num_models,
         lr=args.lr,
         batches=args.batches,
@@ -64,88 +64,93 @@ def train(args: JobDescription):
 
     control_files, patient_files, extra_patient_files = get_data_files()
     images, segmentations = load_data(control_files, patient_files, extra_patient_files)
-    train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files), len(extra_patient_files))
 
-    log(
-        f"{len(train_images) = :,}",
-        f"{len(test_images) = :,}",
-        f"{len(control_files) = :,}",
-        f"{len(patient_files) = :,}",
-        f"{len(extra_patient_files) = :,}",
-    )
+    for split in range(config.splits):
+        log.section("Split %i" % split)
+        location = os.path.join(args.location, "split_%i" % split)
+        os.makedirs(location)
+        train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files), len(extra_patient_files), split)
 
-    augmentations = None if args.no_augment else get_augmentation_pipeline(args.augment_prob)
-    train_dataloader = dataloader_(config, train_images, train_segmentations, augmentations=augmentations, n_control=len(control_files))
-    test_dataloader = dataloader_(config, test_images, test_segmentations, is_test=True)
+        log(
+            f"{len(train_images) = :,}",
+            f"{len(test_images) = :,}",
+            f"{len(control_files) = :,}",
+            f"{len(patient_files) = :,}",
+            f"{len(extra_patient_files) = :,}",
+        )
 
-    models: list[TumorBoi] = list()
-    optimizers = list()
-    schedulers = list()
-    for i in range(config.num_models):
-        model = (UNETTTT if args.unet else TumorBoi)(config).to(device)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
-        scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup_prop * config.batches), config.batches)
-        models.append(model)
-        optimizers.append(optimizer)
-        schedulers.append(scheduler)
+        augmentations = None if args.no_augment else get_augmentation_pipeline(args.augment_prob)
+        train_dataloader = dataloader_(config, train_images, train_segmentations, augmentations=augmentations, n_control=len(control_files))
+        test_dataloader = dataloader_(config, test_images, test_segmentations, is_test=True)
 
-    for i in range(config.batches):
-        for j, model in enumerate(models):
-            ims, segs = next(train_dataloader)
-            out = model(ims, segs)
+        models: list[TumorBoi] = list()
+        optimizers = list()
+        schedulers = list()
+        for i in range(config.num_models):
+            model = (UNETTTT if args.unet else TumorBoi)(config).to(device)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
+            scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup_prop * config.batches), config.batches)
+            models.append(model)
+            optimizers.append(optimizer)
+            schedulers.append(scheduler)
 
-            pred_segs = model.out_to_segs(out, [seg.shape for seg in segs])
-            dice_score = dice(segs, pred_segs)
-            log(
-                "Train %i, %i: %.2f" % (i, j, out.loss.item()),
-                "              %.2f" % dice_score,
-            )
-            results.train_loss[j].append(out.loss.item())
-            results.train_dice[j].append(dice_score)
-
-            out.loss.backward()
-            optimizers[j].step()
-            optimizers[j].zero_grad()
-            schedulers[j].step()
-        if i % args.val_every == 0 or i == (config.batches - 1):
-            plot_samples(job.location, ims[:5], segs[:5], pred_segs[:5], train=True)
-            ims, segs = next(test_dataloader)
-            all_pred_segs = [[] for _ in range(len(ims))]
+        for i in range(config.batches):
             for j, model in enumerate(models):
-                img_idx = 0
-                model.eval()
-                with torch.inference_mode():
-                    out = model(ims, segs)
+                ims, segs = next(train_dataloader)
+                out = model(ims, segs)
+
                 pred_segs = model.out_to_segs(out, [seg.shape for seg in segs])
-                for seg in pred_segs:
-                    all_pred_segs[img_idx].append(seg)
-                    img_idx += 1
                 dice_score = dice(segs, pred_segs)
                 log(
-                    "Test %i, %i: %.2f" % (i, j, out.loss.item()),
-                    "             %.2f" % dice_score,
+                    "Train %i, %i: %.2f" % (i, j, out.loss.item()),
+                    "              %.2f" % dice_score,
                 )
-                results.test_loss[j].append(out.loss.item())
-                results.test_dice[j].append(dice_score)
-                model.train()
+                results.train_loss[j].append(out.loss.item())
+                results.train_dice[j].append(dice_score)
 
-            pred_segs = vote(all_pred_segs)
-            dice_score = dice(segs, pred_segs)
-            results.ensemble_dice.append(dice_score)
-            results.test_batches.append(i)
-            plot_samples(job.location, ims[:5], segs[:5], pred_segs[:5], train=False)
+                out.loss.backward()
+                optimizers[j].step()
+                optimizers[j].zero_grad()
+                schedulers[j].step()
+            if i % args.val_every == 0 or i == (config.batches - 1):
+                plot_samples(location, ims[:5], segs[:5], pred_segs[:5], train=True)
+                ims, segs = next(test_dataloader)
+                all_pred_segs = [[] for _ in range(len(ims))]
+                for j, model in enumerate(models):
+                    img_idx = 0
+                    model.eval()
+                    with torch.inference_mode():
+                        out = model(ims, segs)
+                    pred_segs = model.out_to_segs(out, [seg.shape for seg in segs])
+                    for seg in pred_segs:
+                        all_pred_segs[img_idx].append(seg)
+                        img_idx += 1
+                    dice_score = dice(segs, pred_segs)
+                    log(
+                        "Test %i, %i: %.2f" % (i, j, out.loss.item()),
+                        "             %.2f" % dice_score,
+                    )
+                    results.test_loss[j].append(out.loss.item())
+                    results.test_dice[j].append(dice_score)
+                    model.train()
 
-    log.section("Saving")
-    results.save(os.path.join(os.path.join(args.location, "tumor-segmentation-results")))
-    for i, model in enumerate(models):
-        torch.save(model.state_dict(), os.path.join(args.location, "tumor_model_%i.pt" % i))
+                pred_segs = vote(all_pred_segs)
+                dice_score = dice(segs, pred_segs)
+                results.ensemble_dice.append(dice_score)
+                results.test_batches.append(i)
+                plot_samples(location, ims[:5], segs[:5], pred_segs[:5], train=False)
 
-    plot(args.location, results, config)
+        log.section("Saving")
+        results.save(os.path.join(os.path.join(location, "tumor-segmentation-results")))
+        for i, model in enumerate(models):
+            torch.save(model.state_dict(), os.path.join(location, "tumor_model_%i.pt" % i))
+
+        plot(location, results, config)
 
 if __name__ == "__main__":
     parser = Parser(
         Option("base-model", default="facebook/mask2former-swin-small-ade-semantic"),
-        Option("train-split", default=0.80), # prop of tumor images to train on
+        Option("splits", default=5),
         Option("train-control-prob", default=0.5),
         Option("num-models", default=1),
         Option("lr", default=5e-5),

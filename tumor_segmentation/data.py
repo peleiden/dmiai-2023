@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import albumentations as A
 import h5py
+from sklearn.model_selection import KFold
 
 from tumor_segmentation import TrainConfig
 
@@ -65,7 +66,7 @@ def load_data(control_files: list[str], patient_files: list[str], extra_patient_
 def _sel(arrays: list[np.ndarray], idx: np.ndarray) -> list[np.ndarray]:
     return [arrays[i] for i in idx]
 
-def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], train_cfg: TrainConfig, n_control: int, n_extra: int) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
+def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], train_cfg: TrainConfig, n_control: int, n_extra: int, split: int) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     control_images, images = images[:n_control], images[n_control:]
     images, extra_images = images[:-n_extra], images[-n_extra:]
     control_segmentations, segmentations = segmentations[:n_control], segmentations[n_control:]
@@ -74,13 +75,16 @@ def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], 
     index = np.arange(n)
     np.random.seed(420)
     np.random.shuffle(index)  # inplace >:(
-    n_train = int(train_cfg.train_test_split * n)
+    kf = KFold(train_cfg.splits)
 
-    train_images = extra_images + control_images + _sel(images, index[:n_train])
-    train_segmentations = extra_segmentations + control_segmentations + _sel(segmentations, index[:n_train])
+    train_index, test_index = list(kf.split(np.arange(n)))[split]
+    print(index[test_index])
 
-    test_images = _sel(images, index[n_train:])
-    test_segmentations = _sel(segmentations, index[n_train:])
+    train_images = extra_images + control_images + _sel(images, index[train_index])
+    train_segmentations = extra_segmentations + control_segmentations + _sel(segmentations, index[train_index])
+
+    test_images = _sel(images, index[test_index])
+    test_segmentations = _sel(segmentations, index[test_index])
 
     return train_images, train_segmentations, test_images, test_segmentations
 
@@ -89,7 +93,8 @@ def dataloader(train_cfg: TrainConfig, images: list[np.ndarray], segmentations: 
     n = len(images)
     while True:
         if is_test:
-            yield images, segmentations
+            index = np.random.choice(len(images), len(images), replace=False)
+            yield _sel(images, index), _sel(segmentations, index)
             continue
         if n_control is None:
             index = np.random.randint(0, n, train_cfg.batch_size)
