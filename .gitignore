@@ -8,7 +8,8 @@ local_*
 *.DS_Store
 *.out
 .python-version
-*.png
+ex.png
+tumor_segmentation/h5-samples/
 tumor_segmentation/TrainConfig.json
 tumor_segmentation/TrainResults.json
 
