@@ -2,7 +2,5 @@
 - Gem bedste model
 - Ensemble
 - Generel hyperparemteroptimering
-- Forskellige prætrænede modeller
-- Mål længder: Hvor mange bliver truncated?
 - Mere data: Find vellignende datakilder
 - Skriv api og submit med 1 - preds

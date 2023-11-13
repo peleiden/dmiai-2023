@@ -2,7 +2,7 @@ from functools import partial
 import os
 import json
 
-from datasets import Dataset, DatasetDict, load_dataset
+from datasets import Dataset, DatasetDict, load_dataset, concatenate_datasets
 from pelutils import JobDescription, Option, Parser, log
 import numpy as np
 import pandas as pd
@@ -52,6 +52,11 @@ def get_data(args: JobDescription) -> DatasetDict:
                 pd.concat([df.iloc[:val_start_index], df.iloc[val_end_index:]])
             ),
         )
+        # Ugly pandas stuff
+        if "__index_level_0__" in dataset:
+            dataset = dataset.remove_columns("__index_level_0__")
+
+    dataset["train"] = concatenate_datasets([dataset["train"], Dataset.from_pandas(pd.read_csv("self-generated-data.csv"))])
 
     tokenized_dataset = dataset.map(
         lambda texts: preprocess_data(texts, tokenizer),

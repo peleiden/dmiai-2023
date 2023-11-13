@@ -6,3 +6,4 @@ df = df.map(lambda x: x.strip() if isinstance(x, str) else x).drop_duplicates(su
 
 print(len(df))
 df.to_csv("qa-cleaned.csv")
+
