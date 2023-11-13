@@ -12,29 +12,33 @@ from pelutils import log
 
 from agent_class import make_agent
 
-work3 = True
+work3 = False
 path = "/work3/s183912/trained-agents" if work3 else "trained-agents"
 
 def make_parameter_sets() -> list[dict]:
 
     types = ["dqn", "ac"]
-    layers = [[128, 32], [32, 32], [256, 128, 32]]
+    layers = [[128, 32], [256, 128, 64]]
+    bnorms = [False, True]
     memories = [20000]
     training_strides = [3, 5, 10]
     batch_sizes = [8, 32, 64]
-    discount_factors = [0.97, 0.99, 0.995]
-    epsilons = [0.1, 0.01]
+    discount_factors = [0.98, 0.99, 0.995]
+    epsilons = [0.1, 0.05, 0.01]
+    taus = [1e-1, 1e-2]
 
     parameter_sets = list()
 
-    for type, layer, epsilon, memory, training_stride, batch_size, discount_factor in itertools.product(types, layers, epsilons, memories, training_strides, batch_sizes, discount_factors):
+    for type, layer, epsilon, bnorm, memory, training_stride, batch_size, discount_factor, tau in itertools.product(types, layers, epsilons, bnorms, memories, training_strides, batch_sizes, discount_factors, taus):
 
         parameters = {
             'type': type,
             'N_state': 8,
             'N_actions': 4,
             'layers': [8, *layer, 4],
+            'bnorm': bnorm,
             'epsilon_1': epsilon,
+            'target_net_update_tau': tau,
             #
             'n_memory': memory,
             'training_stride': training_stride,
@@ -42,9 +46,9 @@ def make_parameter_sets() -> list[dict]:
             'saving_stride': 500,
             #
             'n_episodes_max': 5000,
-            'n_solving_episodes': 50,
-            'solving_threshold_min': 230,
-            'solving_threshold_mean': 280,
+            'n_solving_episodes': 69,
+            'solving_threshold_min': 250,
+            'solving_threshold_mean': 300,
             #
             'discount_factor': discount_factor,
         }

@@ -40,6 +40,7 @@ class neural_network(nn.Module):
     '''
 
     def __init__(self,
+                parameters: dict,
                 layers=[8,64,32,4],# layers[i] = # of neurons at i-th layer
                 # layers[0] = input layer
                 # layers[-1] = output layer
@@ -52,7 +53,8 @@ class neural_network(nn.Module):
         n_layers = len(layers)
         for i,neurons_in_current_layer in enumerate(layers[:-1]):
             #
-            # self.network_layers.append(nn.BatchNorm1d(neurons_in_current_layer))
+            if parameters["bnorm"]:
+                self.network_layers.append(nn.BatchNorm1d(neurons_in_current_layer))
             self.network_layers.append(nn.Linear(neurons_in_current_layer, 
                                                 layers[i+1]) )
             #
@@ -159,7 +161,7 @@ class agent_base():
                 {
                 'policy_net':{
                     'optimizer':'RMSprop',
-                     'optimizer_args':{'lr':2e-4}, # learning rate
+                     'optimizer_args':{'lr':5e-4}, # learning rate
                             }
                 },
             'losses':
@@ -281,7 +283,7 @@ class agent_base():
 
         self.neural_networks = {}
         for key, value in neural_networks.items():
-            self.neural_networks[key] = neural_network(value['layers']).to(device)
+            self.neural_networks[key] = neural_network(self.parameters, value['layers']).to(device)
         
     def initialize_optimizers(self,optimizers):
         """Initialize optimizers"""
@@ -544,12 +546,12 @@ class agent_base():
                         "{2: 10.3f}      |    {3: 10.3f}      |")
         #
 
+        best_score = 250
         for n_episode in range(self.n_episodes_max):
             #
             # reset environment and reward of current episode
             state, info = environment.reset()
             current_total_reward = 0.
-            best_score = 200
             #
             for i in itertools.count(): # timesteps of environment
                 #
@@ -945,7 +947,7 @@ class actor_critic(agent_base):
         #
         default_parameters['optimizers']['critic_net'] = {
                     'optimizer':'RMSprop',
-                     'optimizer_args':{'lr':2e-4}, # learning rate
+                     'optimizer_args':{'lr':5e-4}, # learning rate
                             }
         #
         default_parameters['affinities_regularization'] = 0.01
