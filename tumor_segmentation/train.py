@@ -1,8 +1,6 @@
 import os
 from pelutils import JobDescription, Option, Parser, log, Flag
-import cv2
 import matplotlib.pyplot as plt
-import numpy as np
 import pelutils.ds.plots as plots
 import torch
 from pelutils import log
@@ -51,9 +49,9 @@ def train(args: JobDescription):
 
     results = TrainResults.empty(config)
 
-    control_files, patient_files = get_data_files()
-    images, segmentations = load_data(control_files, patient_files)
-    train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files))
+    control_files, patient_files, extra_patient_files = get_data_files()
+    images, segmentations = load_data(control_files, patient_files, extra_patient_files)
+    train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files), len(extra_patient_files))
 
     augmentations = None if args.no_augment else get_augmentation_pipeline(args.augment_prob)
     train_dataloader = dataloader_(config, train_images, train_segmentations, augmentations=augmentations, n_control=len(control_files))

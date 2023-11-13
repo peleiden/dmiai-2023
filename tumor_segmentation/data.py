@@ -19,10 +19,11 @@ def get_augmentation_pipeline(p: float):
         # TODO: Add cropping which removes part of inputs but requires reconsideration of padding
     ])
 
-def get_data_files() -> tuple[list[str], list[str]]:
+def get_data_files() -> tuple[list[str], list[str], list[str]]:
     control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)
     patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)
-    return control_files, patient_files
+    extra_patient_files = glob("tumor_segmentation/data/kaggle-patients/imgs/**/*.png", recursive=True)
+    return control_files, patient_files, extra_patient_files
 
 def load_h5_archive(path: str):
     images, segmentations = [], []
@@ -33,12 +34,12 @@ def load_h5_archive(path: str):
     return images, segmentations
 
 
-def load_data(control_files: list[str], patient_files: list[str]) -> tuple[list[np.ndarray], list[np.ndarray]]:
+def load_data(control_files: list[str], patient_files: list[str], extra_patient_files: list[str]) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """ Returns stacked images and stacked segmentations. """
-    label_files = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in patient_files]
+    label_files = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in patient_files + extra_patient_files]
 
     control_images = [cv2.imread(p)[..., ::-1] for p in control_files]
-    patient_images = [cv2.imread(p)[..., ::-1] for p in patient_files]
+    patient_images = [cv2.imread(p)[..., ::-1] for p in patient_files + extra_patient_files]
 
     control_segmentations = [np.zeros_like(ci) for ci in control_images]
     for p in label_files:
@@ -47,6 +48,9 @@ def load_data(control_files: list[str], patient_files: list[str]) -> tuple[list[
 
     images = control_images + patient_images
     segmentations = control_segmentations + patient_segmentations
+    for seg in segmentations:
+        seg[seg > 0] = 255
+
 
     for i, (im, seg) in enumerate(zip(images, segmentations, strict=True)):
         # Jeg stoler ikke på noget
@@ -63,17 +67,19 @@ def load_data(control_files: list[str], patient_files: list[str]) -> tuple[list[
 def _sel(arrays: list[np.ndarray], idx: np.ndarray) -> list[np.ndarray]:
     return [arrays[i] for i in idx]
 
-def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], train_cfg: TrainConfig, n_control: int) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
+def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], train_cfg: TrainConfig, n_control: int, n_extra: int) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     control_images, images = images[:n_control], images[n_control:]
+    images, extra_images = images[:n_extra], images[n_extra:]
     control_segmentations, segmentations = segmentations[:n_control], segmentations[n_control:]
+    segmentations, extra_segmentations = segmentations[:n_extra], segmentations[n_extra:]
     n = len(images)
     index = np.arange(n)
     np.random.seed(420)
     np.random.shuffle(index)  # inplace >:(
     n_train = int(train_cfg.train_test_split * n)
 
-    train_images = control_images + _sel(images, index[:n_train])
-    train_segmentations = control_segmentations + _sel(segmentations, index[:n_train])
+    train_images = extra_images + control_images + _sel(images, index[:n_train])
+    train_segmentations = extra_segmentations + control_segmentations + _sel(segmentations, index[:n_train])
 
     test_images = _sel(images, index[n_train:])
     test_segmentations = _sel(segmentations, index[n_train:])
