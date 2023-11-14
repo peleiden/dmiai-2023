@@ -87,6 +87,8 @@ def get_training_args(args: JobDescription) -> TrainingArguments:
         learning_rate=args.lr,
         num_train_epochs=args.epochs,
         weight_decay=args.weight_decay,
+        warmup_ratio=args.warmup_prop,
+        lr_scheduler_type=args.scheduler,
     )
 
 
@@ -148,6 +150,8 @@ if __name__ == "__main__":
         Option("seed", default=0),
         Option("cv-folds", default=1),
         Option("my-fold", default=0),
+        Option("warmup-prop", default=0.0),
+        Option("scheduler", default="linear"),
         multiple_jobs=True,
     )
 
