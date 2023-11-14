@@ -106,7 +106,10 @@ if __name__ == "__main__":
         append=True,
     )
     log(f"Will load a røv-kicking model from {location}")
-    config = TrainConfig.load(os.path.join(location, "tumor-segmentation-config"))
+    try:
+        config = TrainConfig.load(os.path.join(location, "tumor-segmentation-config"))
+    except FileNotFoundError:
+        config = TrainConfig.load(os.path.join(location, "..", "tumor-segmentation-config"))
     models: list[TumorBoi] = list()
     for i in range(config.num_models):
         model = TumorBoi(config).eval().to(device)
