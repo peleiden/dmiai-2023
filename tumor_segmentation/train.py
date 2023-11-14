@@ -60,13 +60,15 @@ def train(args: JobDescription):
     )
     config.save(os.path.join(args.location, "tumor-segmentation-config"))
 
-    results = TrainResults.empty(config)
-
     control_files, patient_files, extra_patient_files = get_data_files()
     images, segmentations = load_data(control_files, patient_files, extra_patient_files)
 
+    all_results: list[TrainResults] = list()
+
     for split in range(config.splits):
+
         log.section("Split %i" % split)
+        results = TrainResults.empty(config)
         location = os.path.join(args.location, "split_%i" % split)
         os.makedirs(location)
         train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files), len(extra_patient_files), split)
@@ -142,10 +144,15 @@ def train(args: JobDescription):
 
         log.section("Saving")
         results.save(os.path.join(os.path.join(location, "tumor-segmentation-results")))
+        all_results.append(results)
         for i, model in enumerate(models):
             torch.save(model.state_dict(), os.path.join(location, "tumor_model_%i.pt" % i))
 
         plot(location, results, config)
+
+    results = TrainResults.mean(*all_results)
+    results.save(args.location)
+    plot(args.location, results, config)
 
 if __name__ == "__main__":
     parser = Parser(

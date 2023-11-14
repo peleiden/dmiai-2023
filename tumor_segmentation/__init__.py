@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -45,4 +47,20 @@ class TrainResults(DataStorage):
             train_dice    = [list() for _ in range(train_cfg.num_models)],
             test_dice     = [list() for _ in range(train_cfg.num_models)],
             ensemble_dice = list(),
+        )
+
+    @classmethod
+    def mean(cls, *train_res: TrainResults) -> TrainResults:
+        train_loss    = np.array([tr.train_loss for tr in train_res]).mean(axis=0).tolist()
+        test_loss     = np.array([tr.test_loss for tr in train_res]).mean(axis=0).tolist()
+        train_dice    = np.array([tr.train_dice for tr in train_res]).mean(axis=0).tolist()
+        test_dice     = np.array([tr.test_dice for tr in train_res]).mean(axis=0).tolist()
+        ensemble_dice = np.array([tr.ensemble_dice for tr in train_res]).mean(axis=0).tolist()
+        return cls(
+            train_res[0].test_batches,
+            train_loss,
+            test_loss,
+            train_dice,
+            test_dice,
+            ensemble_dice,
         )

@@ -78,7 +78,6 @@ def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], 
     kf = KFold(train_cfg.splits)
 
     train_index, test_index = list(kf.split(np.arange(n)))[split]
-    print(index[test_index])
 
     train_images = extra_images + control_images + _sel(images, index[train_index])
     train_segmentations = extra_segmentations + control_segmentations + _sel(segmentations, index[train_index])
