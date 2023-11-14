@@ -10,7 +10,7 @@ import torch
 from flask import Flask, request, jsonify
 from flask_restful import Api
 from flask_cors import CORS
-from pelutils import log
+from pelutils import Parser, log
 
 from tumor_segmentation import device, TrainConfig
 from tumor_segmentation.data import vote
@@ -100,11 +100,12 @@ def predict():
     return { "img": encode_request(seg) }
 
 if __name__ == "__main__":
-    location = "local-data/standard"
+    location = Parser().parse_args().location
     log.configure(
         "tumor.log",
         append=True,
     )
+    log(f"Will load a røv-kicking model from {location}")
     config = TrainConfig.load(os.path.join(location, "tumor-segmentation-config"))
     models: list[TumorBoi] = list()
     for i in range(config.num_models):
@@ -118,7 +119,7 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
     import pelutils.ds.plots as plots
-    with plots.Figure("ex.png", figsize=(20, 8), tight_layout=False):
+    with plots.Figure(os.path.join(location, "ex.png"), figsize=(20, 8), tight_layout=False):
         plt.subplot(141)
         plt.imshow(im)
         plt.title("Img")
