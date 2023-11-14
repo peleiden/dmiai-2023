@@ -21,6 +21,9 @@ class TrainConfig(DataStorage):
     train_control_prob: float = 0.5
     dropout: float = 0.0
 
+    # For backwards compatability
+    train_test_split: None = None
+
     def __post_init__(self):
         assert self.num_models % 2 == 1
 
