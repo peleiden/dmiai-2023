@@ -1,6 +1,4 @@
-- Plots: Se efter overfitting
 - Gem bedste model
 - Ensemble
-- Generel hyperparemteroptimering
 - Mere data: Find vellignende datakilder
 - Skriv api og submit med 1 - preds
