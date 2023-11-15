@@ -52,7 +52,7 @@ def get_data(args: JobDescription) -> DatasetDict:
                 pd.concat([df.iloc[:val_start_index], df.iloc[val_end_index:]])
             ),
         )
-        # Ugly pandas stuff
+        # Be gone, ugly pandas stuff!
         if "__index_level_0__" in dataset:
             dataset = dataset.remove_columns("__index_level_0__")
 
@@ -72,8 +72,8 @@ def get_model(args: JobDescription) -> BertForSequenceClassification:
     )
 
 
-def get_training_args(args: JobDescription) -> TrainingArguments:
-    model_name = f"{args.base_model.split('/')[-1]}-ai-detector"
+def get_training_args(args: JobDescription, model_idx: int) -> TrainingArguments:
+    model_name = f"{args.base_model.split('/')[-1]}-idx{model_idx}-ai-detector"
     out_dir = os.path.join(args.location, model_name)
     return TrainingArguments(
         out_dir,
@@ -106,8 +106,6 @@ def get_metrics_function():
 def train(args: JobDescription):
     log("Training with", args)
 
-    train_args = get_training_args(args)
-    log("Trainer arguments", train_args.to_json_string())
 
     data = get_data(args)
     log(
@@ -115,23 +113,29 @@ def train(args: JobDescription):
         f" and {len(data['test'])} eval texts"
     )
 
-    model = get_model(args)
-    log(f"Loaded model with {model.num_parameters()/1e6:.1f} M parameters")
+    for i in range(args.n_ensemble):
+        log.section("Training model %i" % i)
 
-    trainer = Trainer(
-        model=model,
-        compute_metrics=get_metrics_function(),
-        args=train_args,
-        train_dataset=data["train"],
-        eval_dataset=data["test"],
-    )
+        train_args = get_training_args(args, i)
+        log("Trainer arguments", train_args.to_json_string())
 
-    log("Starting training ...")
-    trainer.train()
+        model = get_model(args)
+        log(f"Loaded model with {model.num_parameters()/1e6:.1f} M parameters")
 
-    log("Training finished")
-    eval_res = trainer.evaluate()
-    log("Eval scores:", json.dumps(eval_res, indent=1))
+        trainer = Trainer(
+            model=model,
+            compute_metrics=get_metrics_function(),
+            args=train_args,
+            train_dataset=data["train"],
+            eval_dataset=data["test"],
+        )
+
+        log("Starting training ...")
+        trainer.train()
+
+        log("Training finished")
+        eval_res = trainer.evaluate()
+        log("Eval scores:", json.dumps(eval_res, indent=1))
 
 
 if __name__ == "__main__":
@@ -152,6 +156,7 @@ if __name__ == "__main__":
         Option("my-fold", default=0),
         Option("warmup-prop", default=0.0),
         Option("scheduler", default="linear"),
+        Option("n-ensemble", default=1),
         multiple_jobs=True,
     )
 
