@@ -1,3 +1,4 @@
+import os
 from collections import deque
 
 import albumentations as A
@@ -13,10 +14,11 @@ from tumor_segmentation.mask_to_border import mask_to_border, circular_kernel
 
 control_files, patient_files, extra_patient_files = get_data_files()
 print(len(control_files),len(patient_files), len(extra_patient_files))
-control_imgs, control_segs = load_data(control_files[:10], list(), list())
-patient_imgs, patient_segs = load_data(list(), patient_files[:10], list())
-print(len(control_imgs))
-print(len(patient_imgs))
+control_imgs, control_segs = load_data(control_files, list(), list())
+patient_imgs, patient_segs = load_data(list(), patient_files, list())
+
+def seg_to_shitty_rgb(seg: np.ndarray) -> np.ndarray:
+    return np.stack((seg, seg, seg), axis=-1).astype(np.uint8) * 255
 
 def get_augmentation_pipeline(p: float):
     return A.Compose([
@@ -60,7 +62,12 @@ def tumor_clip(x: int, y: int, seg: np.ndarray) -> tuple[np.ndarray, np.ndarray]
 
 binding_id = plt.connect('button_press_event', lambda event: None)
 augmentations = get_augmentation_pipeline(p=0.2)
-for i, (control_img, control_seg) in enumerate(zip(control_imgs, control_segs, strict=True)):
+for i, (control_path, control_img, control_seg) in enumerate(zip(control_files, control_imgs, control_segs, strict=True)):
+    outpath_img = control_path.replace("/controls/", "/controls-augment/").replace("control_", "patient_")
+    outpath_seg = control_path.replace("/controls/", "/controls-augment/").replace("control_", "segmentation_").replace("/imgs/", "/labels/")
+    if os.path.isfile(outpath_img) and os.path.isfile(outpath_seg):
+        continue
+
     plt.disconnect(binding_id)
     control_img_orig = control_img.copy()
     patient_idx = np.random.randint(len(patient_imgs))
@@ -69,6 +76,7 @@ for i, (control_img, control_seg) in enumerate(zip(control_imgs, control_segs, s
     patient_border = mask_to_border(patient_seg, padding=3)
     patient_img_show = patient_img.copy()
     patient_img_show[np.where(patient_border)] = (0, 153, 255)
+    print(control_path)
 
     tumor_where = (list(), list())
 
@@ -142,11 +150,6 @@ for i, (control_img, control_seg) in enumerate(zip(control_imgs, control_segs, s
     binding_id = plt.connect('button_press_event', on_click)
 
     plt.show()
-    break
 
-
-
-# binding_id = plt.connect('motion_notify_event', on_move)
-# plt.connect('button_press_event', on_click)
-
-# plt.show()
+    cv2.imwrite(outpath_img, control_img)
+    cv2.imwrite(outpath_seg, seg_to_shitty_rgb(control_seg))
