@@ -10,7 +10,7 @@ from tumor_segmentation.dice import BinaryDiceLoss
 
 def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, slice, slice]:
     full_img = np.full_like(image, 255, shape=(991, 400, 3))
-    full_seg = np.full_like(label, True, shape=(991, 400))
+    full_seg = np.full_like(label, False, shape=(991, 400))
 
     startx = (400 - image.shape[1]) // 2
     starty = (991 - image.shape[0]) // 2
@@ -56,13 +56,13 @@ class TumorBoi(nn.Module):
         setattr(out, "slices", slices)
         return out
 
-    def out_to_seg(self, out, img: np.ndarray) -> np.ndarray:
+    def out_to_seg(self, out) -> np.ndarray:
         slicex, slicey = out.slices[0]
         seg = self.processor.post_process_semantic_segmentation(out)[0].cpu().numpy().astype(np.uint8)
         seg = cv2.resize(seg, (400, 991)).astype(bool)[slicey, slicex]
         return seg
 
-    def out_to_segs(self, out, original_shapes) -> list[np.ndarray]:
+    def out_to_segs(self, out) -> list[np.ndarray]:
         slices = out.slices
         segs = self.processor.post_process_semantic_segmentation(out)
         for i, seg in enumerate(segs):

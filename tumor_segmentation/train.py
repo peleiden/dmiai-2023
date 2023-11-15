@@ -102,7 +102,7 @@ def train(args: JobDescription):
                 ims, segs = next(train_dataloader)
                 out = model(ims, segs)
 
-                pred_segs = model.out_to_segs(out, [seg.shape for seg in segs])
+                pred_segs = model.out_to_segs(out)
                 dice_score = dice(segs, pred_segs)
                 log(
                     "Train %i, %i: %.2f" % (i, j, out.loss.item()),
@@ -124,7 +124,7 @@ def train(args: JobDescription):
                     model.eval()
                     with torch.inference_mode():
                         out = model(ims, segs)
-                    pred_segs = model.out_to_segs(out, [seg.shape for seg in segs])
+                    pred_segs = model.out_to_segs(out)
                     for seg in pred_segs:
                         all_pred_segs[img_idx].append(seg)
                         img_idx += 1

@@ -80,7 +80,7 @@ def mask2former_seg(img: np.ndarray) -> np.ndarray:
     all_pred_segs = list()
     for model in models:
         out = model([img], [seg_placeholder])
-        seg = model.out_to_seg(out, img)
+        seg = model.out_to_seg(out)
         all_pred_segs.append(seg)
     seg = vote([all_pred_segs])
     return seg[0]
