@@ -12,6 +12,7 @@ ex.png
 tumor_segmentation/h5-samples/
 tumor_segmentation/TrainConfig.json
 tumor_segmentation/TrainResults.json
+out/
 
 # Latex
 *.aux

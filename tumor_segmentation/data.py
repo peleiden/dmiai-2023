@@ -21,7 +21,7 @@ def get_augmentation_pipeline(p: float):
     ])
 
 def get_data_files() -> tuple[list[str], list[str], list[str]]:
-    control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)
+    control_files = glob("tumor_segmentation/data/controls-augment/imgs/**/*.png", recursive=True)
     patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)
     extra_patient_files = glob("tumor_segmentation/data/kaggle-patients/imgs/**/*.png", recursive=True)
     return control_files, patient_files, extra_patient_files
@@ -36,12 +36,16 @@ def load_h5_archive(path: str):
 
 def load_data(control_files: list[str], patient_files: list[str], extra_patient_files: list[str]) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """ Returns stacked images and stacked segmentations. """
+    label_files_augment = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in control_files]
     label_files = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in patient_files + extra_patient_files]
 
     control_images = [cv2.imread(p)[..., ::-1] for p in control_files]
     patient_images = [cv2.imread(p)[..., ::-1] for p in patient_files + extra_patient_files]
 
-    control_segmentations = [np.zeros_like(ci) for ci in control_images]
+    for p in label_files_augment:
+        assert os.path.isfile(p), p
+    control_segmentations = [cv2.imread(p)[..., ::-1] for p in label_files_augment]
+
     for p in label_files:
         assert os.path.isfile(p), p
     patient_segmentations = [cv2.imread(p)[..., ::-1] for p in label_files]
@@ -131,55 +135,57 @@ def vote(pred_segs: list[list[np.ndarray]]) -> list[np.ndarray]:
     return voted_segs
 
 if __name__ == "__main__":
-    images, segmentations = load_h5_archive("local-data/lab_petct_vox_5.00mm.h5")
-
-    import matplotlib.pyplot as plt
-    import pelutils.ds.plots as plots
-
-    out_dir = Path("tumor_segmentation/data/kaggle-patients")
-    img_dir = out_dir / "imgs"
-    label_dir = out_dir / "labels"
-    for d in img_dir, label_dir:
-        d.mkdir(parents=True, exist_ok=True)
-
-    for i, (image, segmentation) in enumerate(zip(images, segmentations, strict=True)):
-        print(f"{image.shape = } {segmentation.shape = }")
-        plt.imsave(img_dir / f"patient_{i}.png", image, cmap='gray')
-        plt.imsave(label_dir / f"segmentation_{i}.png", segmentation, cmap='gray')
-
-        with plots.Figure("tumor_segmentation/h5-samples/sample_%i.png" % i, figsize=(20, 8), tight_layout=False):
-            plt.subplot(121)
-            plt.imshow(image, cmap="gray")
-            plt.title("H5 image")
-            plt.subplot(122)
-            plt.imshow(segmentation, cmap="gray")
-            plt.title("H5 segmentation")
-    # control_files, patient_files = get_data_files()
-    # images2, segmentations2 = load_data(control_files, patient_files)
-    # print(f"{images.shape = } {segmentations.shape = }")
-    # train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations)
-    # print(f"{train_images.shape = } {train_segmentations.shape = }")
-    # print(f"{test_images.shape = } {test_segmentations.shape = }")
+    # images, segmentations = load_h5_archive("local-data/lab_petct_vox_5.00mm.h5")
 
     # import matplotlib.pyplot as plt
     # import pelutils.ds.plots as plots
 
-    # for i in range(5):
-    #     with plots.Figure("tumor_segmentation/samples/sample_%i.png" % i, figsize=(20, 8), tight_layout=False):
-    #         plt.subplot(141)
-    #         plt.imshow(train_images[i])
-    #         plt.title("Train image %i" % i)
-    #         # plt.gca().set_aspect("equal")
-    #         plt.subplot(142)
-    #         plt.imshow(train_segmentations[i], cmap="gray")
-    #         plt.title("Train segmentation %i" % i)
-    #         # plt.gca().set_aspect("equal")
-    #         plt.subplot(143)
-    #         plt.imshow(test_images[i])
-    #         plt.title("Test image %i" % i)
-    #         # plt.gca().set_aspect("equal")
-    #         plt.subplot(144)
-    #         plt.imshow(test_segmentations[i], cmap="gray")
-    #         plt.plot([1,2,3])
-    #         plt.title("Test segmentation %i" % i)
-    #         # plt.gca().set_aspect("equal")
+    # out_dir = Path("tumor_segmentation/data/kaggle-patients")
+    # img_dir = out_dir / "imgs"
+    # label_dir = out_dir / "labels"
+    # for d in img_dir, label_dir:
+    #     d.mkdir(parents=True, exist_ok=True)
+
+    # for i, (image, segmentation) in enumerate(zip(images, segmentations, strict=True)):
+    #     print(f"{image.shape = } {segmentation.shape = }")
+    #     plt.imsave(img_dir / f"patient_{i}.png", image, cmap='gray')
+    #     plt.imsave(label_dir / f"segmentation_{i}.png", segmentation, cmap='gray')
+
+    #     with plots.Figure("tumor_segmentation/h5-samples/sample_%i.png" % i, figsize=(20, 8), tight_layout=False):
+    #         plt.subplot(121)
+    #         plt.imshow(image, cmap="gray")
+    #         plt.title("H5 image")
+    #         plt.subplot(122)
+    #         plt.imshow(segmentation, cmap="gray")
+    #         plt.title("H5 segmentation")
+    control_files, patient_files, _ = get_data_files()
+    images, segmentations = load_data(control_files, list(), list())
+    print(f"{len(images) = } {len(segmentations) = }")
+    # train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations)
+    # print(f"{len(train_images) = } {len(train_segmentations) = }")
+    # print(f"{len(test_images) = } {len(test_segmentations) = }")
+
+    import matplotlib.pyplot as plt
+    import pelutils.ds.plots as plots
+    from tumor_segmentation.mask_to_border import mask_to_border
+
+    for i in range(5):
+        with plots.Figure("tumor_segmentation/samples/sample_%i.png" % i, figsize=(8, 10), tight_layout=False):
+            # plt.subplot(121)
+            images[i][np.where(mask_to_border(segmentations[i]))] = (0, 200, 0)
+            plt.imshow(images[i])
+            plt.title("Train image %i" % i)
+            # plt.gca().set_aspect("equal")
+            # plt.subplot(122)
+            # plt.imshow(segmentations[i], cmap="gray")
+            # plt.title("Train segmentation %i" % i)
+            # plt.gca().set_aspect("equal")
+            # plt.subplot(143)
+            # plt.imshow(test_images[i])
+            # plt.title("Test image %i" % i)
+            # # plt.gca().set_aspect("equal")
+            # plt.subplot(144)
+            # plt.imshow(test_segmentations[i], cmap="gray")
+            # plt.plot([1,2,3])
+            # plt.title("Test segmentation %i" % i)
+            # # plt.gca().set_aspect("equal")
