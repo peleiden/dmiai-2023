@@ -110,6 +110,10 @@ for i, (control_path, control_img, control_seg) in enumerate(zip(control_files, 
                 # Grab tumor cutout
                 tumor_img = patient_img[y_min:y_max, x_min:x_max].copy()
                 tumor_seg = patient_seg[y_min:y_max, x_min:x_max].copy()
+                tum = tumor_clip(dx // 2, dy // 2, tumor_seg)
+                nottum = tumor_clip(dx // 2, dy // 2, ~tumor_seg)
+                tumor_seg[tum] = 1
+                tumor_seg[nottum] = 0
 
                 # Do augmentations
                 augmented = augmentations(image=tumor_img, mask=tumor_seg * 255)
@@ -125,7 +129,7 @@ for i, (control_path, control_img, control_seg) in enumerate(zip(control_files, 
 
                 # Paste stuff
                 control_img[y:y+dy, x:x+dx][np.where(tumor_seg)] = tumor_img[np.where(tumor_seg)]
-                control_seg[y:y+dy, x:x+dx][np.where(tumor_seg)] = tumor_seg[np.where(tumor_seg)]
+                control_seg[y:y+dy, x:x+dx][np.where(tumor_seg)] = np.minimum(tumor_seg[np.where(tumor_seg)], control_seg[y:y+dy, x:x+dx][np.where(tumor_seg)])
 
                 control_img_blur = ndimage.gaussian_filter(control_img, sigma=np.random.uniform(0.5, 1), truncate=2)
                 kernel = circular_kernel(5)
@@ -139,6 +143,7 @@ for i, (control_path, control_img, control_seg) in enumerate(zip(control_files, 
         control_img_show = control_img.copy()
         control_img_show[np.where(mask_to_border(control_seg, padding=3))] = (255, 153, 0)
         plt.imshow(control_img_show)
+        plt.title(os.path.basename(control_path))
         plt.show()
 
     plt.subplot(121)
@@ -146,6 +151,7 @@ for i, (control_path, control_img, control_seg) in enumerate(zip(control_files, 
 
     plt.subplot(122)
     plt.imshow(control_img)
+    plt.title(os.path.basename(control_path))
 
     binding_id = plt.connect('button_press_event', on_click)
 
