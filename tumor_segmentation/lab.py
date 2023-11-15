@@ -1,13 +1,14 @@
 from collections import deque
 
 import albumentations as A
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.ndimage as ndimage
 from matplotlib.backend_bases import MouseButton
 
 from tumor_segmentation.data import load_data, get_data_files
-from tumor_segmentation.mask_to_border import mask_to_border
+from tumor_segmentation.mask_to_border import mask_to_border, circular_kernel
 
 
 control_files, patient_files, extra_patient_files = get_data_files()
@@ -21,7 +22,7 @@ def get_augmentation_pipeline(p: float):
     return A.Compose([
         A.HorizontalFlip(p=p),
         A.VerticalFlip(p=p),
-        A.Rotate(limit=10, p=p),
+        A.Rotate(limit=90, p=p),
         A.RandomBrightnessContrast(brightness_limit=0.1, contrast_limit=0.1, p=p),
     ])
 
@@ -43,9 +44,6 @@ def tumor_clip(x: int, y: int, seg: np.ndarray) -> tuple[np.ndarray, np.ndarray]
 
     while queue:
         point = queue.popleft()
-        # print(len(queue), len(visited))
-        # if len(queue) > 10000:
-        #     breakpoint()
         for neighbour in neighbours(point):
             if neighbour in visited:
                 continue
@@ -55,7 +53,6 @@ def tumor_clip(x: int, y: int, seg: np.ndarray) -> tuple[np.ndarray, np.ndarray]
                 continue
 
             if neighbour_pix:
-                # print(neighbour, neighbour_pix)
                 visited.add(neighbour)
                 queue.append(neighbour)
 
@@ -69,7 +66,7 @@ for i, (control_img, control_seg) in enumerate(zip(control_imgs, control_segs, s
     patient_idx = np.random.randint(len(patient_imgs))
     patient_img = patient_imgs[patient_idx]
     patient_seg = patient_segs[patient_idx]
-    patient_border = mask_to_border(patient_seg)
+    patient_border = mask_to_border(patient_seg, padding=3)
     patient_img_show = patient_img.copy()
     patient_img_show[np.where(patient_border)] = (0, 153, 255)
 
@@ -94,33 +91,45 @@ for i, (control_img, control_seg) in enumerate(zip(control_imgs, control_segs, s
                 if len(tumor_where[0]) == 0:
                     print("No tumor selected")
                     return
-                x_min = min(tumor_where[1])
-                x_max = max(tumor_where[1])
-                y_min = min(tumor_where[0])
-                y_max = max(tumor_where[0])
+                margin = 5
+                x_min = min(tumor_where[1]) - margin
+                x_max = max(tumor_where[1]) + margin
+                y_min = min(tumor_where[0]) - margin
+                y_max = max(tumor_where[0]) + margin
                 dx = x_max - x_min
                 dy = y_max - y_min
-                tumor_img = patient_img[y_min:y_max, x_min:x_max]
-                tumor_seg = patient_seg[y_min:y_max, x_min:x_max]
-                rots = np.random.randint(4)
-                tumor_img = np.rot90(tumor_img, rots, (0, 1))
-                tumor_seg = np.rot90(tumor_seg, rots)
-                assert tumor_img.shape[:2] == tumor_seg.shape
-                dy, dx = tumor_seg.shape
+
+                # Grab tumor cutout
+                tumor_img = patient_img[y_min:y_max, x_min:x_max].copy()
+                tumor_seg = patient_seg[y_min:y_max, x_min:x_max].copy()
+
+                # Do augmentations
                 augmented = augmentations(image=tumor_img, mask=tumor_seg * 255)
                 tumor_img = augmented['image']
                 tumor_seg = augmented['mask'].astype(bool)
-                rots = np.random.randint(4)
-                alpha = np.random.uniform(0.7, 1)
-                control_img[y:y+dy, x:x+dx][np.where(tumor_seg)] = alpha * tumor_img[np.where(tumor_seg)] + (1 - alpha) * control_img[y:y+dy, x:x+dx][np.where(tumor_seg)]
+
+                xscale = np.random.uniform(0.8, 1.2)
+                yscale = np.random.uniform(0.8, 1.2)
+                tumor_img = cv2.resize(tumor_img, None, fx=xscale, fy=yscale)
+                tumor_seg = cv2.resize(tumor_seg.astype(np.uint8), None, fx=xscale, fy=yscale).astype(bool)
+
+                dy, dx = tumor_seg.shape
+
+                # Paste stuff
+                control_img[y:y+dy, x:x+dx][np.where(tumor_seg)] = tumor_img[np.where(tumor_seg)]
                 control_seg[y:y+dy, x:x+dx][np.where(tumor_seg)] = tumor_seg[np.where(tumor_seg)]
 
-                control_img_blur = ndimage.gaussian_filter(control_img, sigma=2, truncate=4)
-                control_img[y:y+dy, x:x+dx][np.where(tumor_seg)] = control_img_blur[y:y+dy, x:x+dx][np.where(tumor_seg)]
+                control_img_blur = ndimage.gaussian_filter(control_img, sigma=np.random.uniform(0.5, 1), truncate=2)
+                kernel = circular_kernel(5)
+                where_blur = np.logical_xor(
+                    cv2.dilate(tumor_seg.astype(np.uint8), kernel).astype(bool),
+                    cv2.erode(tumor_seg.astype(np.uint8), kernel).astype(bool),
+                )
+                control_img[y:y+dy, x:x+dx][where_blur] = control_img_blur[y:y+dy, x:x+dx][where_blur]
 
         plt.subplot(122)
         control_img_show = control_img.copy()
-        control_img_show[np.where(mask_to_border(control_seg))] = (255, 153, 0)
+        control_img_show[np.where(mask_to_border(control_seg, padding=3))] = (255, 153, 0)
         plt.imshow(control_img_show)
         plt.show()
 
