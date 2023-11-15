@@ -1,5 +1,5 @@
 #!/bin/sh
-#BSUB -q gpuh100
+#BSUB -q gpua100
 #BSUB -gpu "num=1::mode=exclusive_process"
 ##BSUB -R "select[gpu32gb]"
 
@@ -18,7 +18,6 @@
 echo "Starting job on GPU $CUDA_VISIBLE_DEVICES ..."
 
 TPATH=/work3/s183911/toomah
-TPATH=/zhome/ac/c/137651/dmiai/local-data/toomah
 export HUGGINGFACE_HUB_CACHE=/zhome/ac/c/137651/.shitty_hf_cache
 source /zhome/ac/c/137651/dmiai-setup.sh
 export PYTHONPATH=$PYTHONPATH:.

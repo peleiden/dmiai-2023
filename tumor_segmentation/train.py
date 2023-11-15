@@ -71,7 +71,7 @@ def train(args: JobDescription):
         log.section("Split %i" % split)
         results = TrainResults.empty(config)
         location = os.path.join(args.location, "split_%i" % split)
-        os.makedirs(location)
+        os.makedirs(location, exist_ok="Tue")
         train_images, train_segmentations, test_images, test_segmentations = split_train_test(images, segmentations, config, len(control_files), len(extra_patient_files), split)
 
         log(
