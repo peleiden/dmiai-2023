@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify
 from flask_restful import Api
 from flask_cors import CORS
 from pelutils import Parser, log
+import pandas as pd
 import spacy
 
 from ai_text_detector.training.eval import Classifier
@@ -38,6 +39,8 @@ def api_fun(func) -> Callable:
 @api_fun
 def predict():
     data = _get_data()
+    # FIXME: Remove
+    pd.DataFrame({"text": data}).to_csv("full-val.csv", index=False)
     preds = MODEL.predict(data, BATCH_SIZE)
     # FIXME FIXME FIXME REMOVE!
     preds = [1 - p for p in preds]

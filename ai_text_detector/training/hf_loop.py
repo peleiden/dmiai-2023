@@ -28,7 +28,7 @@ def preprocess_data(features: dict, tokenizer: BertTokenizer):
 
 def get_data(args: JobDescription, my_fold: int, do_tokenize=True) -> DatasetDict:
     tokenizer = BertTokenizer.from_pretrained(args.base_model)
-    df = pd.read_csv("val_with_metrics.csv", index_col=0)
+    df = pd.read_csv("full-val.csv", index_col=0)
     df = df.drop(columns=[col for col in df.columns if col != "text"])
     with open("true_labels.thingy", "r", encoding="utf-8") as file:
         df["label"] = pd.Series(
