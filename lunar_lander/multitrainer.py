@@ -17,15 +17,15 @@ path = "/work3/s183912/trained-agents" if work3 else "trained-agents"
 
 def make_parameter_sets() -> list[dict]:
 
-    types = ["dqn", "ac"]
-    layers = [[128, 32], [256, 128, 64]]
+    types = ["dqn", "ddqn", "ac"]
+    layers = [[128], [128, 32], [256, 128, 64], [512, 256, 256]]
     bnorms = [False, True]
     memories = [20000]
     training_strides = [3, 5, 10]
     batch_sizes = [8, 32, 64]
     discount_factors = [0.98, 0.99, 0.995]
-    epsilons = [0.1, 0.05, 0.01]
-    taus = [1e-1, 1e-2]
+    epsilons = [0.1, 0.03, 0.01]
+    taus = [1e-1, 1e-2, 1e-3]
 
     parameter_sets = list()
 

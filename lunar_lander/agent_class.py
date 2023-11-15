@@ -1087,7 +1087,7 @@ class actor_critic(agent_base):
         # scheduler_critic.step()
 
 def make_agent(parameters: dict) -> agent_base:
-    if parameters["type"] == "dqn":
+    if parameters["type"] == "dqn" or parameters["type"] == "ddqn":
         return dqn(parameters)
     elif parameters["type"] == "ac":
         return actor_critic(parameters)
