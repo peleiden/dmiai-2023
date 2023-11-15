@@ -57,6 +57,7 @@ def train(args: JobDescription):
         batch_size=args.batch_size,
         train_control_prob=args.train_control_prob,
         dropout=args.dropout,
+        pretrain_path=args.base_model,
     )
     config.save(os.path.join(args.location, "tumor-segmentation-config"))
 
