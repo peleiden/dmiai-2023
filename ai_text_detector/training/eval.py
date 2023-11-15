@@ -15,16 +15,14 @@ from ai_text_detector.training.hf_loop import get_data
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-
 class Classifier:
-    def __init__(self, model_paths: list[str]):
+    def __init__(self, model_paths: list[str], tokenizer_key: str="chcaa/dfm-encoder-large-v1"):
         checkpoints = [self._get_best_chk(model_path) for model_path in model_paths]
 
         self.models: list[PreTrainedModel] = [
-            # FIXME: Change to chk
-            BertForSequenceClassification.from_pretrained("hf-internal-testing/tiny-bert").eval().to(DEVICE) for chk in checkpoints
+            BertForSequenceClassification.from_pretrained(chk).eval().to(DEVICE) for chk in checkpoints
         ]
-        self.tokenizer = AutoTokenizer.from_pretrained(self.models[0].config._name_or_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_key)
 
     @staticmethod
     def _get_best_chk(path: str):
@@ -69,12 +67,12 @@ def wilson_score_interval(p, n, z=1.96):  # z for 95% CI
 
 
 def compute_all_scores(probs: np.ndarray, true) -> dict[str, float]:
-    preds = probs > .5
+    preds = (probs > .5).astype(int)
     true = np.array(true)
     scores =  dict(accuracy = accuracy_score(true, preds),
         F1 = f1_score(true, preds),
         true_pos_rate = recall_score(true, preds),
-        true_neg_rate = ((preds == true) & (preds == 0)).sum() / (true == 1).sum(),
+        true_neg_rate = ((preds == true) & (preds == 0)).sum() / (true == 0).sum(),
         precision = precision_score(true, preds),
         roc_auc = roc_auc_score(true, probs),
         TP = ((preds == true) & (preds == 1)).sum(),
@@ -88,8 +86,8 @@ def format_scores(scores: dict[str, float], n: int):
     t = Table()
     t.add_header(["Metric", "Score", "95% CI [%]"])
     for name, score in scores.items():
-        uncertainty = ("%.1f; %.1f" % tuple(100*x for x in wilson_score_interval(score, n))) if score <= 1 else ""
-        t.add_row([name, ("%.1f" % (score * 100)) if score < 1 else int(score),  uncertainty])
+        uncertainty = ("%.1f; %.1f" % tuple(100*x for x in wilson_score_interval(score, n))) if not name.isupper() else ""
+        t.add_row([name, ("%.1f" % (score * 100)) if not name.isupper() else int(score),  uncertainty])
     return t
 
 def aggregate_fold_scores(score_dicts: list[dict[str, float]]):
@@ -99,18 +97,18 @@ def aggregate_fold_scores(score_dicts: list[dict[str, float]]):
         scores = [sd[metric] for sd in score_dicts]
         score = np.mean(scores)
         uncertainty = 1.96 * (np.std(scores, ddof=1) / np.sqrt(len(scores)))
-        t.add_row([metric, ("%.1f" % (score * 100)) if score < 1 else int(score),  uncertainty])
+        t.add_row([metric, ("%.1f" % (score * 100)) if not name.isupper() else int(score),  uncertainty])
     return t
 
 
 def eval(args: JobDescription):
     base_name = args.base_model.split('/')[-1]
     all_results = []
-    for i, path in enumerate(sorted(glob(f"{args.location}/fold*"))):
+    for i, path in enumerate(sorted(glob(os.path.join(args.location, "fold*")))):
         dataset = get_data(args, i, do_tokenize=False)
         log.section("Evaluating model %i" % i)
-        if (model_paths := glob(f"{args.location}/{base_name}-*-ai-detector")):
-            model = Classifier(model_paths)
+        if (model_paths := glob(os.path.join(path, f"{base_name}-idx*-ai-detector"))):
+            model = Classifier(sorted(model_paths))
         else:
             model = Classifier([os.path.join(path, f"{base_name}-ai-detector")])
         log(f"Loaded {len(model.models)} models")
@@ -127,10 +125,10 @@ def eval(args: JobDescription):
 
 
         if len(model.models) > 1:
-            for i, model in enumerate(model.models):
+            for i in range(len(model.models)):
                 log("Scores for single ensemble model %i" % i, format_scores(results.model_scores[i], len(dataset)))
             for n_models in range(2, len(model.models) + 1):
-                # TODO: Average across different models
+                # TODO: Average across different models pairs
                 ensemble_scores = compute_all_scores(model_probs[:, :n_models].mean(axis=1), dataset["test"]["label"])
                 log("Scores for ensemble with %i models" % n_models, format_scores(ensemble_scores, len(dataset)))
 
