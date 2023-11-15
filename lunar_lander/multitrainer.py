@@ -18,13 +18,13 @@ path = "/work3/s183912/trained-agents" if work3 else "trained-agents"
 def make_parameter_sets() -> list[dict]:
 
     types = ["dqn", "ddqn", "ac"]
-    layers = [[128], [128, 32], [256, 128, 64], [512, 256, 256]]
-    bnorms = [False, True]
+    layers = [[256, 128, 64], [512, 256, 256], [512, 256, 256, 128]]
+    bnorms = [False]
     memories = [20000]
-    training_strides = [3, 5, 10]
-    batch_sizes = [8, 32, 64]
-    discount_factors = [0.98, 0.99, 0.995]
-    epsilons = [0.1, 0.03, 0.01]
+    training_strides = [2, 3, 4]
+    batch_sizes = [32, 64]
+    discount_factors = [0.99, 0.995]
+    epsilons = [0.1, 0.05, 0.03]
     taus = [1e-1, 1e-2, 1e-3]
 
     parameter_sets = list()
@@ -45,7 +45,7 @@ def make_parameter_sets() -> list[dict]:
             'batch_size': batch_size,
             'saving_stride': 500,
             #
-            'n_episodes_max': 7000,
+            'n_episodes_max': 10000,
             'n_solving_episodes': 69,
             'solving_threshold_min': 250,
             'solving_threshold_mean': 300,
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         )
         args = list(enumerate(parameter_sets * agents_per_parameter))
         if work3:
-            with mp.Pool(2 * 63) as pool:
+            with mp.Pool(128) as pool:
                 pool.map(train_agent, args, chunksize=1)
         else:
             for arg in args:

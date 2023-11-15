@@ -161,7 +161,7 @@ class agent_base():
                 {
                 'policy_net':{
                     'optimizer':'RMSprop',
-                     'optimizer_args':{'lr':5e-4}, # learning rate
+                     'optimizer_args':{'lr':2e-4}, # learning rate
                             }
                 },
             'losses':
@@ -947,7 +947,7 @@ class actor_critic(agent_base):
         #
         default_parameters['optimizers']['critic_net'] = {
                     'optimizer':'RMSprop',
-                     'optimizer_args':{'lr':5e-4}, # learning rate
+                     'optimizer_args':{'lr':2e-4}, # learning rate
                             }
         #
         default_parameters['affinities_regularization'] = 0.01

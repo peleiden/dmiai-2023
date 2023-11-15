@@ -67,7 +67,7 @@ if __name__ == "__main__":
         mean_gameticks = all_gameticks.mean(axis=1)
         best = mean_rewards.argsort()[-15:]
         for b in best:
-            print(mean_rewards[b], mean_gameticks[b], all_paths[b])
+            print(mean_rewards[b], all_rewards.min(axis=1)[b], all_paths[b])
         plt.scatter(mean_gameticks, mean_rewards)
         plt.grid()
         plt.xlabel("Game ticks")
