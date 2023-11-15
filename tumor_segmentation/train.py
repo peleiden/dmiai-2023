@@ -58,6 +58,7 @@ def train(args: JobDescription):
         train_control_prob=args.train_control_prob,
         dropout=args.dropout,
         pretrain_path=args.base_model,
+        pretrain=not job.no_pretraining,
     )
     config.save(os.path.join(args.location, "tumor-segmentation-config"))
 
@@ -91,6 +92,8 @@ def train(args: JobDescription):
         schedulers = list()
         for i in range(config.num_models):
             model = TumorBoi(config).to(device)
+            if not config.pretrain:
+                model.mask2former.init_weights()
             optimizer = torch.optim.AdamW(model.parameters(), lr=config.lr)
             scheduler = get_linear_schedule_with_warmup(optimizer, int(args.warmup_prop * config.batches), config.batches)
             models.append(model)
@@ -169,6 +172,7 @@ if __name__ == "__main__":
         Option("warmup-prop", default=0.06),
         Option("dropout", default=0.0),
         Flag("no-augment"),
+        Flag("no-pretraining"),
         multiple_jobs=True,
     )
 

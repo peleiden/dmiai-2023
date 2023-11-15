@@ -20,6 +20,7 @@ class TrainConfig(DataStorage):
     splits: int = 5
     train_control_prob: float = 0.5
     dropout: float = 0.0
+    pretrain: bool = True
 
     # For backwards compatability
     train_test_split: None = None
