@@ -68,6 +68,8 @@ for i, (control_path, control_img, control_seg) in enumerate(zip(control_files, 
     if os.path.isfile(outpath_img) and os.path.isfile(outpath_seg):
         continue
 
+    print(f"{i + 1} / {len(control_files)}")
+
     plt.disconnect(binding_id)
     control_img_orig = control_img.copy()
     patient_idx = np.random.randint(len(patient_imgs))
@@ -128,8 +130,8 @@ for i, (control_path, control_img, control_seg) in enumerate(zip(control_files, 
                 dy, dx = tumor_seg.shape
 
                 # Paste stuff
-                control_img[y:y+dy, x:x+dx][np.where(tumor_seg)] = tumor_img[np.where(tumor_seg)]
-                control_seg[y:y+dy, x:x+dx][np.where(tumor_seg)] = np.minimum(tumor_seg[np.where(tumor_seg)], control_seg[y:y+dy, x:x+dx][np.where(tumor_seg)])
+                control_img[y:y+dy, x:x+dx][np.where(tumor_seg)] = np.minimum(tumor_img[np.where(tumor_seg)], control_img[y:y+dy, x:x+dx][np.where(tumor_seg)])
+                control_seg[y:y+dy, x:x+dx][np.where(tumor_seg)] = tumor_seg[np.where(tumor_seg)]
 
                 control_img_blur = ndimage.gaussian_filter(control_img, sigma=np.random.uniform(0.5, 1), truncate=2)
                 kernel = circular_kernel(5)
