@@ -26,7 +26,7 @@ def preprocess_data(features: dict, tokenizer: BertTokenizer):
     return model_inputs
 
 
-def get_data(args: JobDescription) -> DatasetDict:
+def get_data(args: JobDescription, my_fold: int, do_tokenize=True) -> DatasetDict:
     tokenizer = BertTokenizer.from_pretrained(args.base_model)
     df = pd.read_csv("val_with_metrics.csv", index_col=0)
     df = df.drop(columns=[col for col in df.columns if col != "text"])
@@ -42,9 +42,9 @@ def get_data(args: JobDescription) -> DatasetDict:
     else:
         df = df.sample(frac=1, random_state=args.seed)
         fold_length = int(len(df) / args.cv_folds)
-        val_start_index = args.my_fold * fold_length
+        val_start_index = my_fold * fold_length
         val_end_index = val_start_index + fold_length
-        if args.my_fold == args.cv_folds - 1:
+        if my_fold == args.cv_folds - 1:
             val_end_index = len(df)
         dataset = DatasetDict(
             test=Dataset.from_pandas(df.iloc[val_start_index:val_end_index]),
@@ -58,11 +58,13 @@ def get_data(args: JobDescription) -> DatasetDict:
 
     dataset["train"] = concatenate_datasets([dataset["train"], Dataset.from_pandas(pd.read_csv("self-generated-data.csv"))])
 
-    tokenized_dataset = dataset.map(
-        lambda texts: preprocess_data(texts, tokenizer),
-        batched=True,
-    )
-    return tokenized_dataset
+    if do_tokenize:
+        tokenized_dataset = dataset.map(
+            lambda texts: preprocess_data(texts, tokenizer),
+            batched=True,
+        )
+        return tokenized_dataset
+    return dataset
 
 
 def get_model(args: JobDescription) -> BertForSequenceClassification:
@@ -107,7 +109,7 @@ def train(args: JobDescription):
     log("Training with", args)
 
 
-    data = get_data(args)
+    data = get_data(args, args.my_fold)
     log(
         f"Loaded data with {len(data['train'])} training texts"
         f" and {len(data['test'])} eval texts"
