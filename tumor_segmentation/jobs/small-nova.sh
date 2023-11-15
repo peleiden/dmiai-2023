@@ -1,7 +1,7 @@
 #!/bin/sh
-#BSUB -q gpua100
+#BSUB -q gpuv100
 #BSUB -gpu "num=1::mode=exclusive_process"
-##BSUB -R "select[gpu32gb]"
+#BSUB -R "select[gpu32gb]"
 
 #BSUB -n 4
 #BSUB -R "rusage[mem=20GB]"
