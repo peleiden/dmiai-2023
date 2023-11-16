@@ -40,7 +40,7 @@ class TumorBoi(nn.Module):
         images = images.copy()
         labels = labels.copy()
         for i in range(len(images)):
-            images[i], labels[i], slicex, slicey = pad(images[i], labels[i])
+            _, _, slicex, slicey = pad(images[i], labels[i])
             slices.append((slicex, slicey))
         inputs = self.processor.preprocess(images, labels, return_tensors="pt")
         images = inputs['pixel_values'].to(device)
@@ -57,7 +57,7 @@ class TumorBoi(nn.Module):
     def out_to_seg(self, out) -> np.ndarray:
         slicex, slicey = out.slices[0]
         seg = self.processor.post_process_semantic_segmentation(out)[0].cpu().numpy().astype(np.uint8)
-        seg = cv2.resize(seg, (400, 991)).astype(bool)[slicey, slicex]
+        seg = cv2.resize(seg, (slicex.stop-slicex.start, slicey.stop-slicey.start)).astype(bool)#[slicey, slicex]
         return seg
 
     def out_to_segs(self, out) -> list[np.ndarray]:
