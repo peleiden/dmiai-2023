@@ -1,5 +1,5 @@
 #!/bin/sh
-#BSUB -q gpuv100
+#BSUB -q gpua100
 #BSUB -gpu "num=1::mode=exclusive_process"
 ##BSUB -R "select[gpu80gb]"
 

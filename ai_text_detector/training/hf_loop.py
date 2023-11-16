@@ -3,7 +3,7 @@ import os
 import json
 
 from datasets import Dataset, DatasetDict, load_dataset, concatenate_datasets
-from pelutils import JobDescription, Option, Parser, log
+from pelutils import JobDescription, Option, Parser, log, Flag
 import numpy as np
 import pandas as pd
 import evaluate
@@ -28,7 +28,7 @@ def preprocess_data(features: dict, tokenizer: BertTokenizer):
 
 def get_data(args: JobDescription, my_fold: int, do_tokenize=True) -> DatasetDict:
     tokenizer = BertTokenizer.from_pretrained(args.base_model)
-    df = pd.read_csv("full-val.csv", index_col=0)
+    df = pd.read_csv("full-val.csv")
     df = df.drop(columns=[col for col in df.columns if col != "text"])
     with open("true_labels.thingy", "r", encoding="utf-8") as file:
         df["label"] = pd.Series(
