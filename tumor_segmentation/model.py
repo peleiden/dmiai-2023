@@ -27,7 +27,11 @@ class TumorBoi(nn.Module):
         super().__init__()
         self.config = config
 
-        self.processor = AutoImageProcessor.from_pretrained(self.config.pretrain_path)
+        self.processor = AutoImageProcessor.from_pretrained(
+            self.config.pretrain_path,
+            image_mean=[0.8630414518385322, 0.8630414518385322, 0.8630414518385322],
+            image_std=[0.2181276311793267, 0.2181276311793267, 0.2181276311793267],
+        )
         self.mask2former = Mask2FormerForUniversalSegmentation.from_pretrained(
             self.config.pretrain_path,
             config = self.config.config,
