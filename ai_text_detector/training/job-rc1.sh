@@ -26,7 +26,8 @@ python ai_text_detector/training/hf_loop.py\
     --scheduler linear\
     --warmup-prop 0.17\
     --epochs 6\
-    --n-ensemble 4
+    --n-ensemble 4\
+    --final
 
 
 

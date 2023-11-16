@@ -84,7 +84,7 @@ def get_training_args(args: JobDescription, model_idx: int) -> TrainingArguments
         out_dir,
         per_device_train_batch_size=args.device_batch_size,
         per_device_eval_batch_size=args.eval_device_batch_size,
-        evaluation_strategy="epoch",
+        evaluation_strategy="no" if args.final else "epoch",
         save_strategy="epoch",
         save_total_limit=1,
         logging_steps=1,
@@ -114,8 +114,8 @@ def train(args: JobDescription):
 
     data = get_data(args, args.my_fold)
     log(
-        f"Loaded data with {len(data['train'])} training texts"
-        f" and {len(data['test'])} eval texts"
+        f"Loaded data with {len(data['train'])} training texts" +
+        ("" if args.final else f" and {len(data['test'])} eval texts")
     )
 
     for i in range(args.n_ensemble):

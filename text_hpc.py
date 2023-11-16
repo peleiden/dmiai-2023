@@ -33,5 +33,6 @@ if __name__ == "__main__":
     log.configure("text-hpc.log")
     with log.log_errors:
         MODEL = Classifier(glob(os.path.join(location, "dfm-encoder-large-v1*-ai-detector")))
+        MODEL.threshold = 0.999
         BATCH_SIZE = 512
         run()

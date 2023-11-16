@@ -23,16 +23,17 @@ class Classifier:
         assert checkpoints
 
         self.models: list[PreTrainedModel] = [
-            BertForSequenceClassification.from_pretrained(chk).eval().to(DEVICE) for chk in checkpoints
+            BertForSequenceClassification.from_pretrained(chk).eval().to(DEVICE) for chk in checkpoints if chk
         ]
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_key)
 
     @staticmethod
     def _get_best_chk(path: str):
-        return sorted(
+        paths = sorted(
             glob(f"{path}/checkpoint-*"),
             key=lambda s: float("inf") if "best" in s else int(s.split("-")[-1]),
-        )[-1]
+        )
+        return paths[-1] if paths else None
 
 
     def predict(self, texts: list[str], batch_size: int) -> list[int]:
