@@ -133,7 +133,7 @@ def train(args: JobDescription):
                         img_idx += 1
                     dice_score = dice(segs, pred_segs)
                     log(
-                        "Test %i, %i: %.2f" % (i, j, out.loss.item()),
+                        "TEST %i, %i: %.2f" % (i, j, out.loss.item()),
                         "             %.2f" % dice_score,
                     )
                     results.test_loss[j].append(out.loss.item())

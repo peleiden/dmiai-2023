@@ -28,10 +28,6 @@ class TrainConfig(DataStorage):
     def __post_init__(self):
         assert self.num_models % 2 == 1
 
-    @property
-    def config(self) -> str:
-        return self.pretrain_path.replace("facebook/", "tumor_segmentation/configs/") + ".json"
-
 @dataclass
 class TrainResults(DataStorage):
 
