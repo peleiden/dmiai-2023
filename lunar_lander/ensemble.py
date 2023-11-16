@@ -1,4 +1,4 @@
-from .agent_class import agent_base
+from lunar_lander.agent_class import agent_base
 from scipy.stats import mode
 
 
