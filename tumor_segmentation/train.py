@@ -180,10 +180,7 @@ if __name__ == "__main__":
 
     jobs = parser.parse_args()
     for job in jobs:
-        log.configure(
-            os.path.join(job.location, "tumor-segmentation-train.log"),
-            append=True,
-        )
+        log.configure(os.path.join(job.location, "tumor-segmentation-train.log"))
         log.log_repo()
         log.section(f"Starting {job.name}")
         with log.log_errors:
