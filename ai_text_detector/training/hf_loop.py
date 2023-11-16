@@ -139,8 +139,9 @@ def train(args: JobDescription):
         trainer.train()
 
         log("Training finished")
-        eval_res = trainer.evaluate()
-        log("Eval scores:", json.dumps(eval_res, indent=1))
+        if not args.final:
+            eval_res = trainer.evaluate()
+            log("Eval scores:", json.dumps(eval_res, indent=1))
 
 
 if __name__ == "__main__":

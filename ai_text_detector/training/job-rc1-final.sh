@@ -1,5 +1,5 @@
 #!/bin/sh
-#BSUB -q gpuv100
+#BSUB -q gpua100
 #BSUB -gpu "num=1::mode=exclusive_process"
 ##BSUB -R "select[gpu80gb]"
 
@@ -9,7 +9,7 @@
 
 #BSUB -W 24:00
 
-#BSUB -J "rc2-final"
+#BSUB -J "rc1"
 #BSUB -N
 #BSUB -u s183911@student.dtu.dk
 #BSUB -oo /zhome/ac/c/137651/joblogs/stdout_%J.out
@@ -21,12 +21,14 @@ TPATH=/work3/s183911/dmiai
 source /zhome/ac/c/137651/dmiai-setup.sh
 
 python ai_text_detector/training/hf_loop.py\
-    $TPATH/rc2-final\
+    $TPATH/rc1\
+    -c ai_text_detector/training/moar-epochs.ini\
     --weight-decay 0.0\
     --scheduler linear\
-    --warmup-prop 0.17\
-    --epochs 6\
-    --n-ensemble 4
+    --warmup-prop 0.25\
+    --epochs 4\
+    --n-ensemble 4\
+    --final
 
 
 

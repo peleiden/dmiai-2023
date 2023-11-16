@@ -74,7 +74,7 @@ def compute_all_scores(probs: np.ndarray, true, threshold: float) -> dict[str, f
     preds = (probs > threshold).astype(int)
     true = np.array(true)
     scores =  dict(accuracy = accuracy_score(true, preds),
-        F1 = f1_score(true, preds),
+        F1_score = f1_score(true, preds),
         true_pos_rate = recall_score(true, preds),
         true_neg_rate = ((preds == true) & (preds == 0)).sum() / (true == 0).sum(),
         precision = precision_score(true, preds),
