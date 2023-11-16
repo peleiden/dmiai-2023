@@ -1,11 +1,9 @@
 import cv2
 import numpy as np
-import torch
 import torch.nn as nn
-from transformers import AutoImageProcessor, Mask2FormerForUniversalSegmentation, AutoConfig, AutoModelForSemanticSegmentation
+from transformers import AutoImageProcessor, Mask2FormerForUniversalSegmentation
 
 from . import device, TrainConfig
-from tumor_segmentation.dice import BinaryDiceLoss
 
 
 def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, slice, slice]:
@@ -36,12 +34,9 @@ class TumorBoi(nn.Module):
         self.config = config
 
         self.processor = AutoImageProcessor.from_pretrained(self.config.pretrain_path)
-        config = AutoConfig.from_pretrained(self.config.pretrain_path)
-        config.id2label = {0: "healthy", 1: "tumor"}
-        config.label2id = {"healthy": 0, "tumor": 1}
-        self.mask2former = AutoModelForSemanticSegmentation.from_pretrained(
+        self.mask2former = Mask2FormerForUniversalSegmentation.from_pretrained(
             self.config.pretrain_path,
-            config = config,
+            config = self.config.config,
             ignore_mismatched_sizes = True,
         )
         self._set_dropouts(self.config.dropout)
@@ -51,10 +46,17 @@ class TumorBoi(nn.Module):
         images = images.copy()
         labels = labels.copy()
         for i in range(len(images)):
-            images[i], labels[i], slicex, slicey = pad(images[i], labels[i])
+            images[i], labels[i], slicex, slicey = pad(channel_fuckwy(images[i]), labels[i])
             slices.append((slicex, slicey))
-        inputs = self.processor.preprocess(images, labels, return_tensors="pt").to(device)
-        out = self.mask2former(**inputs)
+        inputs = self.processor.preprocess(images, labels, return_tensors="pt")
+        images = inputs['pixel_values'].to(device)
+        mask_labels = [x.to(device) for x in inputs['mask_labels']]
+        class_labels = [x.to(device) for x in inputs['class_labels']]
+        out = self.mask2former(
+            pixel_values = images,
+            mask_labels  = mask_labels,
+            class_labels = class_labels,
+        )
         setattr(out, "slices", slices)
         return out
 

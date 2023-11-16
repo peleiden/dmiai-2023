@@ -21,7 +21,7 @@ def get_augmentation_pipeline(p: float):
     ])
 
 def get_data_files() -> tuple[list[str], list[str], list[str]]:
-    control_files = glob("tumor_segmentation/data/controls-augment/imgs/**/*.png", recursive=True)
+    control_files = glob("tumor_segmentation/data/controls/**/*.png", recursive=True)
     patient_files = glob("tumor_segmentation/data/patients/imgs/**/*.png", recursive=True)
     extra_patient_files = glob("tumor_segmentation/data/kaggle-patients/imgs/**/*.png", recursive=True)
     return control_files, patient_files, extra_patient_files
@@ -36,15 +36,16 @@ def load_h5_archive(path: str):
 
 def load_data(control_files: list[str], patient_files: list[str], extra_patient_files: list[str]) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """ Returns stacked images and stacked segmentations. """
-    label_files_augment = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in control_files]
+    # label_files_augment = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in control_files]
     label_files = [p.replace("/imgs/", "/labels/").replace("/patient_", "/segmentation_") for p in patient_files + extra_patient_files]
 
     control_images = [cv2.imread(p)[..., ::-1] for p in control_files]
     patient_images = [cv2.imread(p)[..., ::-1] for p in patient_files + extra_patient_files]
 
-    for p in label_files_augment:
-        assert os.path.isfile(p), p
-    control_segmentations = [cv2.imread(p)[..., ::-1] for p in label_files_augment]
+    # for p in label_files_augment:
+    #     assert os.path.isfile(p), p
+    # control_segmentations = [cv2.imread(p)[..., ::-1] for p in label_files_augment]
+    control_segmentations = [np.zeros_like(ci) for ci in control_images]
 
     for p in label_files:
         assert os.path.isfile(p), p

@@ -4,9 +4,11 @@ import matplotlib.pyplot as plt
 import pelutils.ds.plots as plots
 import numpy as np
 import torch
+import torch.cuda.amp as amp
 from pelutils import log
 from transformers import get_linear_schedule_with_warmup
 from PIL import Image
+from pprint import pformat
 
 from tumor_segmentation import device, TrainConfig, TrainResults
 from tumor_segmentation.data import dice, get_data_files, load_data, split_train_test, dataloader as dataloader_, vote, get_augmentation_pipeline
@@ -47,7 +49,7 @@ def plot_samples(path: str, ims: list[np.ndarray], segs: list[np.ndarray], pred_
     return ims
 
 def train(args: JobDescription):
-    log("Training with", args)
+    log("Training with", pformat(args.todict()))
 
     config = TrainConfig(
         splits=args.splits,
@@ -103,7 +105,8 @@ def train(args: JobDescription):
         for i in range(config.batches):
             for j, model in enumerate(models):
                 ims, segs = next(train_dataloader)
-                out = model(ims, segs)
+                with amp.autocast():
+                    out = model(ims, segs)
 
                 pred_segs = model.out_to_segs(out)
                 dice_score = dice(segs, pred_segs)
