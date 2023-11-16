@@ -105,8 +105,7 @@ def train(args: JobDescription):
         for i in range(config.batches):
             for j, model in enumerate(models):
                 ims, segs = next(train_dataloader)
-                with amp.autocast():
-                    out = model(ims, segs)
+                out = model(ims, segs)
 
                 pred_segs = model.out_to_segs(out)
                 dice_score = dice(segs, pred_segs)
