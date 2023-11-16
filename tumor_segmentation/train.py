@@ -118,7 +118,7 @@ def train(args: JobDescription):
                 optimizers[j].step()
                 optimizers[j].zero_grad()
                 schedulers[j].step()
-            if i % args.val_every == 0 or i == (config.batches - 1):
+            if (i % args.val_every == 0 or i == (config.batches - 1)) and config.splits > 1:
                 plot_samples(location, ims[:5], segs[:5], pred_segs[:5], train=True)
                 ims, segs = next(test_dataloader)
                 all_pred_segs = [[] for _ in range(len(ims))]

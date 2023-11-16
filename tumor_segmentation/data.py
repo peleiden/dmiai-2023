@@ -77,17 +77,24 @@ def split_train_test(images: list[np.ndarray], segmentations: list[np.ndarray], 
     segmentations, extra_segmentations = segmentations[:-n_extra], segmentations[-n_extra:]
     n = len(images)
     index = np.arange(n)
-    np.random.seed(420)
-    np.random.shuffle(index)  # inplace >:(
-    kf = KFold(train_cfg.splits)
 
-    train_index, test_index = list(kf.split(np.arange(n)))[split]
+    if train_cfg.splits > 1:
+        np.random.seed(420)
+        np.random.shuffle(index)  # inplace >:(
+        kf = KFold(train_cfg.splits)
 
-    train_images = extra_images + control_images + _sel(images, index[train_index])
-    train_segmentations = extra_segmentations + control_segmentations + _sel(segmentations, index[train_index])
+        train_index, test_index = list(kf.split(np.arange(n)))[split]
 
-    test_images = _sel(images, index[test_index])
-    test_segmentations = _sel(segmentations, index[test_index])
+        train_images = extra_images + control_images + _sel(images, index[train_index])
+        train_segmentations = extra_segmentations + control_segmentations + _sel(segmentations, index[train_index])
+
+        test_images = _sel(images, index[test_index])
+        test_segmentations = _sel(segmentations, index[test_index])
+    else:
+        train_images = extra_images + control_images + images
+        train_segmentations = extra_segmentations + control_segmentations + segmentations
+        test_images = list()
+        test_segmentations = list()
 
     return train_images, train_segmentations, test_images, test_segmentations
 
