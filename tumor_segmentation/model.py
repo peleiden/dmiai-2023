@@ -21,12 +21,6 @@ def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, s
 
     return full_img, full_seg, slicex, slicey
 
-def channel_fuckwy(img: np.ndarray) -> np.ndarray:
-    img = img.copy()
-    img[..., 1] = 255 * (img[..., 0] < 80)
-    img[..., 2] = cv2.Laplacian(img[..., 0], ddepth=-1, ksize=3, scale=2)
-    return img
-
 class TumorBoi(nn.Module):
 
     def __init__(self, config: TrainConfig):
@@ -46,7 +40,7 @@ class TumorBoi(nn.Module):
         images = images.copy()
         labels = labels.copy()
         for i in range(len(images)):
-            images[i], labels[i], slicex, slicey = pad(channel_fuckwy(images[i]), labels[i])
+            images[i], labels[i], slicex, slicey = pad(images[i], labels[i])
             slices.append((slicex, slicey))
         inputs = self.processor.preprocess(images, labels, return_tensors="pt")
         images = inputs['pixel_values'].to(device)
