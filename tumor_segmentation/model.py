@@ -70,8 +70,8 @@ class TumorBoi(nn.Module):
 
     def out_to_seg(self, out) -> np.ndarray:
         slicex, slicey = out.slices[0]
-        seg = self.processor.post_process_semantic_segmentation(out)[0].cpu().numpy().astype(np.uint8) - 1
-        seg = cv2.resize(seg, (slicex.stop-slicex.start, slicey.stop-slicey.start)).astype(bool)[slicey, slicex]
+        seg = self.processor.post_process_semantic_segmentation(out)[0].cpu().numpy().astype(np.uint8)
+        seg = cv2.resize(seg, (400, 991)).astype(bool)[slicey, slicex]
         return seg
 
     def out_to_segs(self, out) -> list[np.ndarray]:
