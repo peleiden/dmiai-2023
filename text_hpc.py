@@ -26,11 +26,12 @@ def run():
             with open("valid.json", "w") as f:
                 json.dump(dict(preds=preds, reviews=texts), f, indent=4)
             requests.post(ADDR_SEND, json={ "answers": preds })
+            log("Replied")
 
 if __name__ == "__main__":
     location = Parser().parse_args().location
     log.configure("text-hpc.log")
     with log.log_errors:
         MODEL = Classifier(glob(os.path.join(location, "dfm-encoder-large-v1*-ai-detector")))
-        BATCH_SIZE = 128
+        BATCH_SIZE = 512
         run()
