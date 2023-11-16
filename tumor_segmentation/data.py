@@ -168,24 +168,21 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import pelutils.ds.plots as plots
     from tumor_segmentation.mask_to_border import mask_to_border
+    from tumor_segmentation.model import channel_fuckwy
 
     for i in range(5):
-        with plots.Figure("tumor_segmentation/samples/sample_%i.png" % i, figsize=(8, 10), tight_layout=False):
-            # plt.subplot(121)
+        with plots.Figure("tumor_segmentation/samples/sample_%i.png" % i, figsize=(15, 15), tight_layout=False):
+            img = channel_fuckwy(images[i])
+            plt.subplot(141)
+            plt.imshow(img[..., 0])
+            plt.title("Red")
+            plt.subplot(142)
+            plt.imshow(img[..., 1])
+            plt.title("Green")
+            plt.subplot(143)
+            plt.imshow(img[..., 2])
+            plt.title("Blue")
+            plt.subplot(144)
             images[i][np.where(mask_to_border(segmentations[i]))] = (0, 200, 0)
             plt.imshow(images[i])
             plt.title("Train image %i" % i)
-            # plt.gca().set_aspect("equal")
-            # plt.subplot(122)
-            # plt.imshow(segmentations[i], cmap="gray")
-            # plt.title("Train segmentation %i" % i)
-            # plt.gca().set_aspect("equal")
-            # plt.subplot(143)
-            # plt.imshow(test_images[i])
-            # plt.title("Test image %i" % i)
-            # # plt.gca().set_aspect("equal")
-            # plt.subplot(144)
-            # plt.imshow(test_segmentations[i], cmap="gray")
-            # plt.plot([1,2,3])
-            # plt.title("Test segmentation %i" % i)
-            # # plt.gca().set_aspect("equal")

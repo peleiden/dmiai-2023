@@ -23,6 +23,12 @@ def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, s
 
     return full_img, full_seg, slicex, slicey
 
+def channel_fuckwy(img: np.ndarray) -> np.ndarray:
+    img = img.copy()
+    img[..., 1] = 255 * (img[..., 0] < 80)
+    img[..., 2] = cv2.Laplacian(img[..., 0], ddepth=-1, ksize=3, scale=2)
+    return img
+
 class TumorBoi(nn.Module):
 
     def __init__(self, config: TrainConfig):
