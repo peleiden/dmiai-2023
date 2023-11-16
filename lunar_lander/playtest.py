@@ -1,8 +1,7 @@
-import os
-import pickle
 import sys
-from glob import glob as glob  # glob
 import itertools
+import multiprocessing as mp
+from glob import glob as glob  # glob
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -17,7 +16,7 @@ from agent_class import agent_base
 from ensemble import act_ensemble
 
 
-n = 200
+n = 2500
 env = gym.make('LunarLander-v2')
 
 paths = glob("gode-agenter/*")
@@ -26,8 +25,8 @@ agents = [load_agent(x) for x in paths]
 def evaluate(agents: list[agent_base]):
     rewards = list()
     ticks = list()
-    for i in tqdm(range(n), position=1):
-        obs, _ = env.reset(seed=i)
+    for i in tqdm(range(n), position=1, disable=False):
+        obs, _ = env.reset(seed=10000+i)
         steps = 0
         total_reward = 0
         is_terminal = False
@@ -44,7 +43,7 @@ def evaluate(agents: list[agent_base]):
 def evaluate_single_agents():
     rewards = np.empty((len(agents), n))
     ticks = np.empty((len(agents), n), dtype=int)
-    for i, agent in tqdm(enumerate(agents)):
+    for i, agent in tqdm(enumerate(agents), position=0):
         r, g = evaluate([agent])
         rewards[i] = r
         ticks[i] = g
@@ -74,18 +73,28 @@ if __name__ == "__main__":
             plt.scatter(np.full(n, i), single_rewards[i])
         plt.grid()
 
+    paths = paths[:5]
+    agents = agents[:5]
+    single_rewards = single_rewards[:5]
+    single_ticks = single_ticks[:5]
+
     agent_combs = list()
     ensemble_rewards = list()
     ensemble_ticks = list()
     used_combs = set()
-    for i, (j, k, l) in tqdm(enumerate(itertools.product(range(len(agents)), range(len(agents)), range(len(agents))))):
-        if len({j, k, l}) < 3:
+    combinations = list(itertools.product(range(len(agents)), range(len(agents)), range(len(agents)), range(len(agents))))
+    for i, (j, k, l, m) in tqdm(enumerate(combinations), total=len(combinations), position=0):
+        sorted_tuple = tuple(sorted(list(set((j, k, l, m)))))
+        if len(set(sorted_tuple)) < 2:
             continue
-        if tuple(sorted((j, k, l))) in used_combs:
+        if sorted_tuple in used_combs:
             continue
-        used_combs.add(tuple(sorted((j, k, l))))
-        rewards, ticks = evaluate([agents[j], agents[k], agents[l]])
-        agent_combs.append((j, k, l))
+        used_combs.add(sorted_tuple)
+        agent_combs.append(sorted_tuple)
+        print(agent_combs[-1])
+
+    for i, index in enumerate(tqdm(agent_combs, position=0)):
+        rewards, ticks = evaluate([agents[o] for o in index])
         ensemble_rewards.append(rewards)
         ensemble_ticks.append(ticks)
 

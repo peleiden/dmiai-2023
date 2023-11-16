@@ -11,18 +11,24 @@ from tqdm import tqdm
 
 sys.path.append("..")
 
-from multitrainer import work3, path
+from multitrainer import path
 from run_agent import load_agent
 from agent_class import agent_base
 
 
-n = 200
+n = 1000
 env = gym.make('LunarLander-v2')
 
-def evaluate(agent: agent_base):
+def evaluate(agent_path: str):
+    print(agent_path)
+    try:
+        agent = load_agent(agent_path)
+    except (EOFError, RuntimeError) as e:
+        print("Failed for %s" % agent_path, e)
+        return
     rewards = list()
     ticks = list()
-    for i in tqdm(range(n), position=1):
+    for i in range(n):
         obs, _ = env.reset()
         steps = 0
         total_reward = 0
@@ -45,16 +51,21 @@ if __name__ == "__main__":
     all_gameticks = list()
 
     print("Starting")
-    for path in tqdm(paths, position=0):
-        try:
-            agent = load_agent(path)
-        except (EOFError, RuntimeError) as e:
-            print("Failed for %s" % path, e)
+    print(f"{len(paths):,} agents")
+    import torch
+    import multiprocessing as mp
+    torch.set_num_threads(1)
+
+    with mp.Pool() as pool:
+        results = pool.map(evaluate, paths, chunksize=1)
+
+    for i, rg in enumerate(results):
+        if rg is None:
             continue
-        r, g = evaluate(agent)
+        r, g = rg
         all_rewards.append(r)
         all_gameticks.append(g)
-        all_paths.append(path)
+        all_paths.append(paths[i])
 
     # with open("eval.pkl", "rb") as f:
     #     all_paths, all_rewards, all_gameticks = pickle.load(f)
@@ -64,10 +75,11 @@ if __name__ == "__main__":
     with plots.Figure("eval.png", figsize=(20, 10)):
         plt.subplot(121)
         mean_rewards = all_rewards.mean(axis=1)
+        sorted_rewards = np.sort(all_rewards, axis=1)
         mean_gameticks = all_gameticks.mean(axis=1)
         best = mean_rewards.argsort()[-15:]
         for b in best:
-            print(mean_rewards[b], all_rewards.min(axis=1)[b], all_paths[b])
+            print(mean_rewards[b], sorted_rewards[b][n//4], all_rewards.min(axis=1)[b], all_paths[b])
         plt.scatter(mean_gameticks, mean_rewards)
         plt.grid()
         plt.xlabel("Game ticks")
