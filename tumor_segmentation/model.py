@@ -8,7 +8,7 @@ from . import device, TrainConfig
 
 def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, slice, slice, np.ndarray]:
     full_img = np.full_like(image, 255, shape=(991, 400, 3))
-    full_seg = np.full_like(label, 2, shape=(991, 400), dtype=np.uint8)
+    full_seg = np.full_like(label, 0, shape=(991, 400), dtype=np.uint8)
 
     startx = (400 - image.shape[1]) // 2
     starty = (991 - image.shape[0]) // 2
@@ -17,7 +17,9 @@ def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, s
     slicey = slice(starty, starty + image.shape[0])
 
     full_img[slicey, slicex] = image
-    full_seg[slicey, slicex] = label
+    full_seg[slicey, slicex] = label + 1
+    # full_seg[slicey.start] = 0
+    # full_seg[slicey.stop-1] = 0
 
     return full_img, full_seg, slicex, slicey
 
@@ -29,7 +31,8 @@ class TumorBoi(nn.Module):
 
         self.processor = AutoImageProcessor.from_pretrained(
             self.config.pretrain_path,
-            ignore_index=2,
+            ignore_index=255,
+            reduce_labels=True,
             image_mean=[0.8630414518385323, 0.8630414518385329, 0.8630414518385320],
             image_std=[0.2181276311793262, 0.2181276311793267, 0.2181276311793268],
         )
@@ -51,6 +54,11 @@ class TumorBoi(nn.Module):
         pixel_mask = inputs['pixel_mask'].to(device)
         mask_labels = [x.to(device) for x in inputs['mask_labels']]
         class_labels = [x.to(device) for x in inputs['class_labels']]
+
+        for i in range(len(images)):
+            pixel_mask[i].zero_()
+            pixel_mask[i, slices[i][1], slices[i][0]] = 1
+
         out = self.mask2former(
             pixel_values=pixel_values,
             mask_labels=mask_labels,
@@ -62,8 +70,8 @@ class TumorBoi(nn.Module):
 
     def out_to_seg(self, out) -> np.ndarray:
         slicex, slicey = out.slices[0]
-        seg = self.processor.post_process_semantic_segmentation(out)[0].cpu().numpy().astype(np.uint8)
-        seg = cv2.resize(seg, (slicex.stop-slicex.start, slicey.stop-slicey.start)).astype(bool)#[slicey, slicex]
+        seg = self.processor.post_process_semantic_segmentation(out)[0].cpu().numpy().astype(np.uint8) - 1
+        seg = cv2.resize(seg, (slicex.stop-slicex.start, slicey.stop-slicey.start)).astype(bool)[slicey, slicex]
         return seg
 
     def out_to_segs(self, out) -> list[np.ndarray]:

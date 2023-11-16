@@ -107,7 +107,7 @@ def dataloader(train_cfg: TrainConfig, images: list[np.ndarray], segmentations: 
             index = np.random.choice(len(images), len(images), replace=False)
             yield _sel(images, index), _sel(segmentations, index)
             continue
-        if n_control is None:
+        if not n_control:
             index = np.random.randint(0, n, train_cfg.batch_size)
         else:
             control_batch = int(train_cfg.batch_size * train_cfg.train_control_prob)
