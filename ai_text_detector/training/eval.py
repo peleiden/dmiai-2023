@@ -20,6 +20,7 @@ class Classifier:
 
     def __init__(self, model_paths: list[str], tokenizer_key: str="chcaa/dfm-encoder-large-v1"):
         checkpoints = [self._get_best_chk(model_path) for model_path in model_paths]
+        assert checkpoints
 
         self.models: list[PreTrainedModel] = [
             BertForSequenceClassification.from_pretrained(chk).eval().to(DEVICE) for chk in checkpoints
@@ -35,7 +36,7 @@ class Classifier:
 
 
     def predict(self, texts: list[str], batch_size: int) -> list[int]:
-        return [int(prob > self.threshold) for prob in self.predict_prob(texts, batch_size)]
+        return [int(prob > self.threshold) for prob in self.predict_probs(texts, batch_size)]
 
     def predict_probs(self, texts: list[str], batch_size: int, vote=True):
         for batch in tqdm(DataLoader(texts, batch_size=batch_size)):
