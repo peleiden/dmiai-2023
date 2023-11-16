@@ -3,8 +3,8 @@ import time
 from tqdm import tqdm
 import numpy as np
 import requests
-NUM_EXAMPLES = 1082
-ALL_ZEROS_SCORE = 0.5295748613678373
+NUM_EXAMPLES = 1133
+ALL_ZEROS_SCORE = 0.5445719329214476
 
 
 
@@ -20,7 +20,6 @@ def post_attempt():
 
 def check_improved(uuid: str):
     while True:
-        time.sleep(np.random.exponential(0.5))
         get_url = f"https://cases.dmiai.dk/api/v1/usecases/ai-text-detector/validate/queue/{uuid}/attempt"
         get_headers = {"x-token": "aba10b0bc50e4ce6bdc180b2e05df4cc"}
 
@@ -28,7 +27,7 @@ def check_improved(uuid: str):
         get_response_json = get_response.json()
         if get_response_json.get("finished_at"):
             return int(get_response_json["score"] > ALL_ZEROS_SCORE)
-
+        time.sleep(np.random.exponential(0.1))
 
 def main():
     already_checked = set()
@@ -43,13 +42,12 @@ def main():
         with open("idx_to_test.int", "w", encoding="utf-8") as file:
             file.write(str(idx))
         while True:
-            time.sleep(np.random.exponential(1))
             response = post_attempt()
             if response.get("status") == "queued":
                 uuid = response["queued_attempt_uuid"]
                 break
-            else:
-                print("Attempt POST unsuccesful, retrying ...")
+            print("Attempt POST unsuccesful, retrying ...")
+            time.sleep(np.random.exponential(1))
         label = check_improved(uuid)
         with open(out, "a") as file:
             file.write("%i %i\n" % (idx, label))
