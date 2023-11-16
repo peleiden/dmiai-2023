@@ -38,7 +38,10 @@ def get_data(args: JobDescription, my_fold: int, do_tokenize=True) -> DatasetDic
     df["label"] = df["label"].astype(int)
     if args.cv_folds == 1:
         dataset = Dataset.from_pandas(df)
-        dataset = dataset.train_test_split(test_size=args.val_split, seed=args.seed)
+        if args.final:
+            dataset = DatasetDict(train=dataset)
+        else:
+            dataset = dataset.train_test_split(test_size=args.val_split, seed=args.seed)
     else:
         df = df.sample(frac=1, random_state=args.seed)
         fold_length = int(len(df) / args.cv_folds)
@@ -129,7 +132,7 @@ def train(args: JobDescription):
             compute_metrics=get_metrics_function(),
             args=train_args,
             train_dataset=data["train"],
-            eval_dataset=data["test"],
+            eval_dataset=None if args.final else data["test"] ,
         )
 
         log("Starting training ...")
@@ -159,6 +162,7 @@ if __name__ == "__main__":
         Option("warmup-prop", default=0.0),
         Option("scheduler", default="linear"),
         Option("n-ensemble", default=1),
+        Flag("final"),
         multiple_jobs=True,
     )
 
