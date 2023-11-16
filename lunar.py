@@ -26,9 +26,9 @@ log.configure(
     print_level=0,
 )
 agents = [
-    load_agent("lunar_lander/agent-593-dqn.best.pt"),
-    load_agent("lunar_lander/agent-380-dqn.best.pt"),
-    load_agent("lunar_lander/agent-12-ddqn.best.pt"),
+    load_agent("lunar_lander/gode-agenter/agent-216-dqn.best.pt"),
+    load_agent("lunar_lander/gode-agenter/agent-138-ddqn.best.pt"),
+    load_agent("lunar_lander/gode-agenter/agent-12-ddqn.best.pt"),
     # load_agent("lunar_lander/agent-997-dqn.best.pt"),
     # load_agent("lunar_lander/agent-371-ac.best.pt"),
     # load_agent("lunar_lander/agent-477-ac.best.pt"),
