@@ -51,7 +51,7 @@ def to_hpc():
 @api_fun
 def from_hpc():
     global PREDICTIONS_RECEIVED
-    print("Receiving...")
+    log("Receiving from hpc...")
     PREDICTIONS_RECEIVED = _get_data()
 
 @app.route("/predict", methods=["POST"])
@@ -88,4 +88,4 @@ if __name__ == "__main__":
         "text.log",
         append=True,
     )
-    app.run(host="0.0.0.0", port=6969, debug=False, processes=1, threaded=False)
+    app.run(host="0.0.0.0", port=6969, debug=False, processes=1)
