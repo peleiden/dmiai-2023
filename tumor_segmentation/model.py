@@ -6,9 +6,9 @@ from transformers import AutoImageProcessor, Mask2FormerForUniversalSegmentation
 from . import device, TrainConfig
 
 
-def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, slice, slice]:
+def pad(image: np.ndarray, label: np.ndarray) -> tuple[np.ndarray, np.ndarray, slice, slice, np.ndarray]:
     full_img = np.full_like(image, 255, shape=(991, 400, 3))
-    full_seg = np.full_like(label, False, shape=(991, 400))
+    full_seg = np.full_like(label, 2, shape=(991, 400), dtype=np.uint8)
 
     startx = (400 - image.shape[1]) // 2
     starty = (991 - image.shape[0]) // 2
@@ -29,31 +29,33 @@ class TumorBoi(nn.Module):
 
         self.processor = AutoImageProcessor.from_pretrained(
             self.config.pretrain_path,
-            image_mean=[0.8630414518385322, 0.8630414518385322, 0.8630414518385322],
-            image_std=[0.2181276311793267, 0.2181276311793267, 0.2181276311793267],
+            ignore_index=2,
+            image_mean=[0.8630414518385323, 0.8630414518385329, 0.8630414518385320],
+            image_std=[0.2181276311793262, 0.2181276311793267, 0.2181276311793268],
         )
         self.mask2former = Mask2FormerForUniversalSegmentation.from_pretrained(
             self.config.pretrain_path,
             config = self.config.config,
             ignore_mismatched_sizes = True,
         )
-        self._set_dropouts(self.config.dropout)
 
     def forward(self, images: list[np.ndarray], labels: list[np.ndarray]):
         slices = list()
         images = images.copy()
         labels = labels.copy()
         for i in range(len(images)):
-            _, _, slicex, slicey = pad(images[i], labels[i])
+            images[i], labels[i], slicex, slicey = pad(images[i], labels[i])
             slices.append((slicex, slicey))
         inputs = self.processor.preprocess(images, labels, return_tensors="pt")
-        images = inputs['pixel_values'].to(device)
+        pixel_values = inputs['pixel_values'].to(device)
+        pixel_mask = inputs['pixel_mask'].to(device)
         mask_labels = [x.to(device) for x in inputs['mask_labels']]
         class_labels = [x.to(device) for x in inputs['class_labels']]
         out = self.mask2former(
-            pixel_values = images,
-            mask_labels  = mask_labels,
-            class_labels = class_labels,
+            pixel_values=pixel_values,
+            mask_labels=mask_labels,
+            class_labels=class_labels,
+            pixel_mask=pixel_mask,
         )
         setattr(out, "slices", slices)
         return out
@@ -74,8 +76,3 @@ class TumorBoi(nn.Module):
             segs[i] = seg
 
         return segs
-
-    def _set_dropouts(self, p: float):
-        for module in self.modules():
-            if isinstance(module, nn.Dropout):
-                module.p = p
